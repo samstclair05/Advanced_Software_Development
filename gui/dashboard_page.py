@@ -54,13 +54,13 @@ class DashboardPage(tk.Frame):
 
         #role label
         role_label = tk.Label(
-        self.topbar,
-        text=f"Role: {self.role}",
-        bg=NAVY,
-        fg="white",
-        font=("Arial", 11)
-    )
-    role_label.pack(side="right", padx=20)
+            self.topbar,
+            text=f"Role: {self.role}",
+            bg=NAVY,
+            fg="white",
+            font=("Arial", 11)
+        )
+        role_label.pack(side="right", padx=20)
 
         #main area
         self.main_area = tk.Frame(self, bg=LIGHT_BG)
