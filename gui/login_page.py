@@ -1,5 +1,4 @@
 import tkinter as tk
-from tkinter import messagebox
 from gui.dashboard_page import DashboardPage
 from models.user import get_user
 
@@ -46,7 +45,7 @@ class LoginPage(tk.Frame):
         self.password_entry = tk.Entry(login_box, width=30, show="*")
         self.password_entry.pack(pady=(5, 10))
 
-        # error message label (hidden until needed)
+        # error message label
         self.error_label = tk.Label(login_box, text="", bg=WHITE, fg="red", font=("Arial", 10))
         self.error_label.pack()
 
@@ -76,12 +75,12 @@ class LoginPage(tk.Frame):
         user = get_user(username)
 
         if user and user["password"] == password:
-            self.go_to_dashboard()
+            self.go_to_dashboard(user)
         else:
             self.error_label.config(text="Invalid username or password.")
             self.password_entry.delete(0, tk.END)
 
-    def go_to_dashboard(self):
+    def go_to_dashboard(self, user):
         self.destroy()
-        dashboard = DashboardPage(self.parent)
+        dashboard = DashboardPage(self.parent, user)
         dashboard.pack(fill="both", expand=True)

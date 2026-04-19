@@ -78,8 +78,10 @@ class ApartmentPage(tk.Frame):
         self.rooms_entry.grid(row=2, column=1, padx=15, pady=12)
 
         tk.Label(form_box, text="Occupancy Status", bg=WHITE, fg=TEXT, font=("Arial", 11)).grid(row=2, column=2, padx=15, pady=12, sticky="w")
-        self.status_entry = tk.Entry(form_box, width=25, bg="white", fg=TEXT, insertbackground=TEXT, relief="solid", bd=1)
-        self.status_entry.grid(row=2, column=3, padx=15, pady=12)
+        self.status_var = tk.StringVar(value="Vacant")
+        status_menu = tk.OptionMenu(form_box, self.status_var, "Vacant", "Occupied", "Reserved", "Under Maintenance")
+        status_menu.config(width=22, bg=WHITE, fg=TEXT, relief="solid", bd=1, highlightthickness=0)
+        status_menu.grid(row=2, column=3, padx=15, pady=12, sticky="w")
 
         #row 4
         tk.Label(form_box, text="Floor Number", bg=WHITE, fg=TEXT, font=("Arial", 11)).grid(row=3, column=0, padx=15, pady=12, sticky="w")
@@ -202,10 +204,15 @@ class ApartmentPage(tk.Frame):
     def load_records(self):
         for row in self.tree.get_children():
             self.tree.delete(row)
+
         for a in get_all_apartments():
             self.tree.insert("", "end", values=(
-                a["apartment_id"], a["location"], a["apartment_type"],
-                a["num_rooms"], a["floor_number"], f"£{a['monthly_rent']:.2f}",
+                a["apartment_id"],
+                a["location"],
+                a["apartment_type"],
+                a["num_rooms"],
+                a["floor_number"],
+                f"£{a['monthly_rent']:.2f}",
                 a["occupancy_status"]
             ))
 
@@ -213,21 +220,24 @@ class ApartmentPage(tk.Frame):
         selected = self.tree.selection()
         if not selected:
             return
+
         values = self.tree.item(selected, "values")
         self.handle_clear()
+
         self.apartment_id_entry.insert(0, values[0])
         self.location_entry.insert(0, values[1])
         self.type_entry.insert(0, values[2])
         self.rooms_entry.insert(0, values[3])
         self.floor_entry.insert(0, values[4])
         self.rent_entry.insert(0, values[5].replace("£", ""))
-        self.status_entry.insert(0, values[6])
+        self.status_var.set(values[6])
 
     def handle_add(self):
         location = self.location_entry.get().strip()
         if not location:
             messagebox.showwarning("Missing Field", "Location is required.")
             return
+
         try:
             rooms = int(self.rooms_entry.get()) if self.rooms_entry.get() else 0
             floor = int(self.floor_entry.get()) if self.floor_entry.get() else 0
@@ -235,15 +245,17 @@ class ApartmentPage(tk.Frame):
         except ValueError:
             messagebox.showerror("Invalid Input", "Rooms and Floor must be whole numbers, Rent must be a number.")
             return
+
         add_apartment(
             location,
             self.type_entry.get(),
             rooms,
             floor,
             rent,
-            self.status_entry.get() or "Vacant",
+            self.status_var.get() or "Vacant",
             self.notes_entry.get()
         )
+
         messagebox.showinfo("Success", "Apartment added successfully.")
         self.handle_clear()
         self.load_records()
@@ -253,7 +265,9 @@ class ApartmentPage(tk.Frame):
         if not selected:
             messagebox.showwarning("No Selection", "Please select an apartment to update.")
             return
+
         apartment_id = self.tree.item(selected, "values")[0]
+
         try:
             rooms = int(self.rooms_entry.get()) if self.rooms_entry.get() else 0
             floor = int(self.floor_entry.get()) if self.floor_entry.get() else 0
@@ -261,6 +275,7 @@ class ApartmentPage(tk.Frame):
         except ValueError:
             messagebox.showerror("Invalid Input", "Rooms and Floor must be whole numbers, Rent must be a number.")
             return
+
         update_apartment(
             apartment_id,
             self.location_entry.get(),
@@ -268,9 +283,10 @@ class ApartmentPage(tk.Frame):
             rooms,
             floor,
             rent,
-            self.status_entry.get(),
+            self.status_var.get(),
             self.notes_entry.get()
         )
+
         messagebox.showinfo("Success", "Apartment updated successfully.")
         self.handle_clear()
         self.load_records()
@@ -280,8 +296,10 @@ class ApartmentPage(tk.Frame):
         if not selected:
             messagebox.showwarning("No Selection", "Please select an apartment to delete.")
             return
+
         apartment_id = self.tree.item(selected, "values")[0]
         confirm = messagebox.askyesno("Confirm Delete", "Are you sure you want to delete this apartment?")
+
         if confirm:
             delete_apartment(apartment_id)
             messagebox.showinfo("Deleted", "Apartment deleted successfully.")
@@ -290,8 +308,14 @@ class ApartmentPage(tk.Frame):
 
     def handle_clear(self):
         for entry in [
-            self.apartment_id_entry, self.location_entry, self.type_entry,
-            self.rooms_entry, self.floor_entry, self.rent_entry,
-            self.status_entry, self.notes_entry
+            self.apartment_id_entry,
+            self.location_entry,
+            self.type_entry,
+            self.rooms_entry,
+            self.floor_entry,
+            self.rent_entry,
+            self.notes_entry
         ]:
             entry.delete(0, tk.END)
+
+        self.status_var.set("Vacant")
