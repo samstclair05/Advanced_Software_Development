@@ -1,5 +1,6 @@
 import tkinter as tk
-
+from tkinter import ttk, messagebox
+from models.apartment import add_apartment, update_apartment, delete_apartment, get_all_apartments
 
 LIGHT_BG = "#F4F6F8"
 WHITE = "#FFFFFF"
@@ -16,6 +17,7 @@ class ApartmentPage(tk.Frame):
     def __init__(self, parent):
         super().__init__(parent, bg=LIGHT_BG)
         self.create_widgets()
+        self.load_records()
 
     def create_widgets(self):
         #page title
@@ -88,13 +90,14 @@ class ApartmentPage(tk.Frame):
         self.notes_entry = tk.Entry(form_box, width=25, bg="white", fg=TEXT, insertbackground=TEXT, relief="solid", bd=1)
         self.notes_entry.grid(row=3, column=3, padx=15, pady=12)
 
-                #button area
+        #button area
         button_frame = tk.Frame(self, bg=LIGHT_BG)
         button_frame.pack(anchor="w", padx=25, pady=12)
 
         tk.Button(
             button_frame,
             text="Add Apartment",
+            command=self.handle_add,
             bg=LIGHT_BUTTON,
             fg=TEXT,
             activebackground=LIGHT_BUTTON_HOVER,
@@ -110,6 +113,7 @@ class ApartmentPage(tk.Frame):
         tk.Button(
             button_frame,
             text="Update",
+            command=self.handle_update,
             bg=LIGHT_BUTTON,
             fg=TEXT,
             activebackground=LIGHT_BUTTON_HOVER,
@@ -125,6 +129,7 @@ class ApartmentPage(tk.Frame):
         tk.Button(
             button_frame,
             text="Delete",
+            command=self.handle_delete,
             bg=LIGHT_BUTTON,
             fg=TEXT,
             activebackground=LIGHT_BUTTON_HOVER,
@@ -140,6 +145,7 @@ class ApartmentPage(tk.Frame):
         tk.Button(
             button_frame,
             text="Clear",
+            command=self.handle_clear,
             bg=LIGHT_BUTTON,
             fg=TEXT,
             activebackground=LIGHT_BUTTON_HOVER,
@@ -151,6 +157,7 @@ class ApartmentPage(tk.Frame):
             font=("Arial", 11, "bold"),
             cursor="hand2"
         ).pack(side="left", padx=6)
+
         #records box
         records_box = tk.Frame(
             self,
@@ -160,7 +167,6 @@ class ApartmentPage(tk.Frame):
         )
         records_box.pack(fill="both", expand=True, padx=25, pady=10)
 
-        #records title
         records_title = tk.Label(
             records_box,
             text="Apartment Records",
@@ -170,12 +176,122 @@ class ApartmentPage(tk.Frame):
         )
         records_title.pack(anchor="w", padx=15, pady=(15, 10))
 
-        #records text
-        table_placeholder = tk.Label(
-            records_box,
-            text="Apartment records table will appear here",
-            bg=WHITE,
-            fg=SUBTEXT,
-            font=("Arial", 11)
+        #records table
+        columns = ("id", "location", "type", "rooms", "floor", "rent", "status")
+        self.tree = ttk.Treeview(records_box, columns=columns, show="headings", selectmode="browse")
+
+        self.tree.heading("id", text="ID")
+        self.tree.heading("location", text="Location")
+        self.tree.heading("type", text="Type")
+        self.tree.heading("rooms", text="Rooms")
+        self.tree.heading("floor", text="Floor")
+        self.tree.heading("rent", text="Monthly Rent")
+        self.tree.heading("status", text="Status")
+
+        self.tree.column("id", width=40, anchor="center")
+        self.tree.column("location", width=150)
+        self.tree.column("type", width=100)
+        self.tree.column("rooms", width=60, anchor="center")
+        self.tree.column("floor", width=60, anchor="center")
+        self.tree.column("rent", width=110, anchor="center")
+        self.tree.column("status", width=110, anchor="center")
+
+        self.tree.pack(fill="both", expand=True, padx=15, pady=(0, 15))
+        self.tree.bind("<<TreeviewSelect>>", self.on_row_select)
+
+    def load_records(self):
+        for row in self.tree.get_children():
+            self.tree.delete(row)
+        for a in get_all_apartments():
+            self.tree.insert("", "end", values=(
+                a["apartment_id"], a["location"], a["apartment_type"],
+                a["num_rooms"], a["floor_number"], f"£{a['monthly_rent']:.2f}",
+                a["occupancy_status"]
+            ))
+
+    def on_row_select(self, event):
+        selected = self.tree.selection()
+        if not selected:
+            return
+        values = self.tree.item(selected, "values")
+        self.handle_clear()
+        self.apartment_id_entry.insert(0, values[0])
+        self.location_entry.insert(0, values[1])
+        self.type_entry.insert(0, values[2])
+        self.rooms_entry.insert(0, values[3])
+        self.floor_entry.insert(0, values[4])
+        self.rent_entry.insert(0, values[5].replace("£", ""))
+        self.status_entry.insert(0, values[6])
+
+    def handle_add(self):
+        location = self.location_entry.get().strip()
+        if not location:
+            messagebox.showwarning("Missing Field", "Location is required.")
+            return
+        try:
+            rooms = int(self.rooms_entry.get()) if self.rooms_entry.get() else 0
+            floor = int(self.floor_entry.get()) if self.floor_entry.get() else 0
+            rent = float(self.rent_entry.get()) if self.rent_entry.get() else 0.0
+        except ValueError:
+            messagebox.showerror("Invalid Input", "Rooms and Floor must be whole numbers, Rent must be a number.")
+            return
+        add_apartment(
+            location,
+            self.type_entry.get(),
+            rooms,
+            floor,
+            rent,
+            self.status_entry.get() or "Vacant",
+            self.notes_entry.get()
         )
-        table_placeholder.pack(pady=30)
+        messagebox.showinfo("Success", "Apartment added successfully.")
+        self.handle_clear()
+        self.load_records()
+
+    def handle_update(self):
+        selected = self.tree.selection()
+        if not selected:
+            messagebox.showwarning("No Selection", "Please select an apartment to update.")
+            return
+        apartment_id = self.tree.item(selected, "values")[0]
+        try:
+            rooms = int(self.rooms_entry.get()) if self.rooms_entry.get() else 0
+            floor = int(self.floor_entry.get()) if self.floor_entry.get() else 0
+            rent = float(self.rent_entry.get()) if self.rent_entry.get() else 0.0
+        except ValueError:
+            messagebox.showerror("Invalid Input", "Rooms and Floor must be whole numbers, Rent must be a number.")
+            return
+        update_apartment(
+            apartment_id,
+            self.location_entry.get(),
+            self.type_entry.get(),
+            rooms,
+            floor,
+            rent,
+            self.status_entry.get(),
+            self.notes_entry.get()
+        )
+        messagebox.showinfo("Success", "Apartment updated successfully.")
+        self.handle_clear()
+        self.load_records()
+
+    def handle_delete(self):
+        selected = self.tree.selection()
+        if not selected:
+            messagebox.showwarning("No Selection", "Please select an apartment to delete.")
+            return
+        apartment_id = self.tree.item(selected, "values")[0]
+        confirm = messagebox.askyesno("Confirm Delete", "Are you sure you want to delete this apartment?")
+        if confirm:
+            delete_apartment(apartment_id)
+            messagebox.showinfo("Deleted", "Apartment deleted successfully.")
+            self.handle_clear()
+            self.load_records()
+
+    def handle_clear(self):
+        for entry in [
+            self.apartment_id_entry, self.location_entry, self.type_entry,
+            self.rooms_entry, self.floor_entry, self.rent_entry,
+            self.status_entry, self.notes_entry
+        ]:
+            entry.delete(0, tk.END)

@@ -1,5 +1,6 @@
 import tkinter as tk
-
+from tkinter import messagebox
+from models.tenant import add_tenant, update_tenant, delete_tenant, get_all_tenants
 
 LIGHT_BG = "#F4F6F8"
 WHITE = "#FFFFFF"
@@ -15,6 +16,7 @@ class TenantPage(tk.Frame):
     def __init__(self, parent):
         super().__init__(parent, bg=LIGHT_BG)
         self.create_widgets()
+        self.load_records()
 
     def create_widgets(self):
         #page title
@@ -94,6 +96,7 @@ class TenantPage(tk.Frame):
         tk.Button(
             button_frame,
             text="Add Tenant",
+            command=self.handle_add,
             bg=LIGHT_BUTTON,
             fg=TEXT,
             activebackground=LIGHT_BUTTON_HOVER,
@@ -109,6 +112,7 @@ class TenantPage(tk.Frame):
         tk.Button(
             button_frame,
             text="Update",
+            command=self.handle_update,
             bg=LIGHT_BUTTON,
             fg=TEXT,
             activebackground=LIGHT_BUTTON_HOVER,
@@ -124,6 +128,7 @@ class TenantPage(tk.Frame):
         tk.Button(
             button_frame,
             text="Delete",
+            command=self.handle_delete,
             bg=LIGHT_BUTTON,
             fg=TEXT,
             activebackground=LIGHT_BUTTON_HOVER,
@@ -139,6 +144,7 @@ class TenantPage(tk.Frame):
         tk.Button(
             button_frame,
             text="Clear",
+            command=self.handle_clear,
             bg=LIGHT_BUTTON,
             fg=TEXT,
             activebackground=LIGHT_BUTTON_HOVER,
@@ -152,6 +158,7 @@ class TenantPage(tk.Frame):
         ).pack(side="left", padx=6)
 
         #records box
+        from tkinter import ttk
         records_box = tk.Frame(
             self,
             bg=WHITE,
@@ -160,7 +167,6 @@ class TenantPage(tk.Frame):
         )
         records_box.pack(fill="both", expand=True, padx=25, pady=10)
 
-        #records title
         records_title = tk.Label(
             records_box,
             text="Tenant Records",
@@ -170,12 +176,111 @@ class TenantPage(tk.Frame):
         )
         records_title.pack(anchor="w", padx=15, pady=(15, 10))
 
-        #records text
-        table_placeholder = tk.Label(
-            records_box,
-            text="Tenant records table will appear here",
-            bg=WHITE,
-            fg=SUBTEXT,
-            font=("Arial", 11)
+        #records table
+        columns = ("id", "name", "phone", "email", "occupation", "ni_number", "lease_period")
+        self.tree = ttk.Treeview(records_box, columns=columns, show="headings", selectmode="browse")
+
+        self.tree.heading("id", text="ID")
+        self.tree.heading("name", text="Name")
+        self.tree.heading("phone", text="Phone")
+        self.tree.heading("email", text="Email")
+        self.tree.heading("occupation", text="Occupation")
+        self.tree.heading("ni_number", text="NI Number")
+        self.tree.heading("lease_period", text="Lease Period")
+
+        self.tree.column("id", width=40, anchor="center")
+        self.tree.column("name", width=150)
+        self.tree.column("phone", width=110)
+        self.tree.column("email", width=180)
+        self.tree.column("occupation", width=120)
+        self.tree.column("ni_number", width=100)
+        self.tree.column("lease_period", width=100)
+
+        self.tree.pack(fill="both", expand=True, padx=15, pady=(0, 15))
+        self.tree.bind("<<TreeviewSelect>>", self.on_row_select)
+
+    def load_records(self):
+        #clear existing rows
+        for row in self.tree.get_children():
+            self.tree.delete(row)
+        #load from database
+        for t in get_all_tenants():
+            self.tree.insert("", "end", values=(
+                t["tenant_id"], t["name"], t["phone"], t["email"],
+                t["occupation"], t["ni_number"], t["lease_period"]
+            ))
+
+    def on_row_select(self, event):
+        #populate form fields when a row is clicked
+        selected = self.tree.selection()
+        if not selected:
+            return
+        values = self.tree.item(selected, "values")
+        self.handle_clear()
+        self.name_entry.insert(0, values[1])
+        self.phone_entry.insert(0, values[2])
+        self.email_entry.insert(0, values[3])
+        self.occupation_entry.insert(0, values[4])
+        self.ni_entry.insert(0, values[5])
+        self.lease_entry.insert(0, values[6])
+
+    def handle_add(self):
+        name = self.name_entry.get().strip()
+        if not name:
+            messagebox.showwarning("Missing Field", "Tenant Name is required.")
+            return
+        add_tenant(
+            name,
+            self.phone_entry.get(),
+            self.email_entry.get(),
+            self.occupation_entry.get(),
+            self.ni_entry.get(),
+            self.lease_entry.get(),
+            self.reference_entry.get(),
+            self.apartment_req_entry.get()
         )
-        table_placeholder.pack(pady=30)
+        messagebox.showinfo("Success", "Tenant added successfully.")
+        self.handle_clear()
+        self.load_records()
+
+    def handle_update(self):
+        selected = self.tree.selection()
+        if not selected:
+            messagebox.showwarning("No Selection", "Please select a tenant to update.")
+            return
+        tenant_id = self.tree.item(selected, "values")[0]
+        update_tenant(
+            tenant_id,
+            self.name_entry.get(),
+            self.phone_entry.get(),
+            self.email_entry.get(),
+            self.occupation_entry.get(),
+            self.ni_entry.get(),
+            self.lease_entry.get(),
+            self.reference_entry.get(),
+            self.apartment_req_entry.get()
+        )
+        messagebox.showinfo("Success", "Tenant updated successfully.")
+        self.handle_clear()
+        self.load_records()
+
+    def handle_delete(self):
+        selected = self.tree.selection()
+        if not selected:
+            messagebox.showwarning("No Selection", "Please select a tenant to delete.")
+            return
+        tenant_id = self.tree.item(selected, "values")[0]
+        confirm = messagebox.askyesno("Confirm Delete", "Are you sure you want to delete this tenant?")
+        if confirm:
+            delete_tenant(tenant_id)
+            messagebox.showinfo("Deleted", "Tenant deleted successfully.")
+            self.handle_clear()
+            self.load_records()
+
+    def handle_clear(self):
+        for entry in [
+            self.name_entry, self.phone_entry, self.email_entry,
+            self.occupation_entry, self.ni_entry, self.lease_entry,
+            self.reference_entry, self.apartment_req_entry
+        ]:
+            entry.delete(0, tk.END)
