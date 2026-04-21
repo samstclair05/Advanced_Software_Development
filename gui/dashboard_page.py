@@ -2,6 +2,8 @@ import tkinter as tk
 from gui.tenant_page import TenantPage
 from gui.apartment_page import ApartmentPage
 from gui.payment_page import PaymentPage
+from gui.maintenance_page import MaintenancePage
+from gui.report_page import ReportPage
 from PIL import Image, ImageTk
 
 
@@ -209,9 +211,11 @@ class DashboardPage(tk.Frame):
             page = PaymentPage(self.content_frame)
             page.pack(fill="both", expand=True, padx=20, pady=20)
         elif page_name == "maintenance":
-            self.show_placeholder("Maintenance Page", "by teammate.") #Sophia
+            page = MaintenancePage(self.content_frame)
+            page.pack(fill="both", expand=True, padx=20, pady=20)
         elif page_name == "report":
-            self.show_placeholder("Report Page", "by teammate.") #sophia
+            page = ReportPage(self.content_frame)
+            page.pack(fill="both", expand=True, padx=20, pady=20)
 
     def show_dashboard_home(self):
         #hero image section
