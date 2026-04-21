@@ -3,9 +3,10 @@ CREATE TABLE IF NOT EXISTS users (
     user_id INTEGER PRIMARY KEY AUTOINCREMENT,
     username TEXT NOT NULL UNIQUE,
     password TEXT NOT NULL,
-    role TEXT NOT NULL DEFAULT 'Front Desk Staff'
+    role TEXT NOT NULL DEFAULT 'front_desk',
+    location TEXT
 );
-
+ 
 -- Tenants table
 CREATE TABLE IF NOT EXISTS tenants (
     tenant_id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -18,7 +19,7 @@ CREATE TABLE IF NOT EXISTS tenants (
     reference TEXT,
     apartment_requirement TEXT
 );
-
+ 
 -- Apartments table
 CREATE TABLE IF NOT EXISTS apartments (
     apartment_id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -30,7 +31,7 @@ CREATE TABLE IF NOT EXISTS apartments (
     occupancy_status TEXT DEFAULT 'Vacant',
     notes TEXT
 );
-
+ 
 -- Leases table
 CREATE TABLE IF NOT EXISTS leases (
     lease_id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -43,7 +44,7 @@ CREATE TABLE IF NOT EXISTS leases (
     FOREIGN KEY (tenant_id) REFERENCES tenants(tenant_id),
     FOREIGN KEY (apartment_id) REFERENCES apartments(apartment_id)
 );
-
+ 
 -- Payments table
 CREATE TABLE IF NOT EXISTS payments (
     payment_id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -57,7 +58,7 @@ CREATE TABLE IF NOT EXISTS payments (
     FOREIGN KEY (tenant_id) REFERENCES tenants(tenant_id),
     FOREIGN KEY (apartment_id) REFERENCES apartments(apartment_id)
 );
-
+ 
 -- Maintenance requests table
 CREATE TABLE IF NOT EXISTS maintenance_requests (
     request_id INTEGER PRIMARY KEY AUTOINCREMENT,
