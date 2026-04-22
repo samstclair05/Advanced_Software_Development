@@ -92,28 +92,32 @@ class ReportPage(tk.Frame):
         
         self.occupancy_filter_var = tk.StringVar(value="Apartment")
         
-        apartment_radio = tk.Radiobutton(controls_frame, text="Apartment", variable=self.occupancy_filter_var, value="Apartment", bg=WHITE, font=("Arial", 10))
+        apartment_radio = tk.Radiobutton(controls_frame, text="Apartment", variable=self.occupancy_filter_var, value="Apartment", bg=WHITE, font=("Arial", 10), command=self.update_occupancy_hint)
         apartment_radio.pack(side="left", padx=10)
         
-        city_radio = tk.Radiobutton(controls_frame, text="City", variable=self.occupancy_filter_var, value="City", bg=WHITE, font=("Arial", 10))
+        city_radio = tk.Radiobutton(controls_frame, text="City", variable=self.occupancy_filter_var, value="City", bg=WHITE, font=("Arial", 10), command=self.update_occupancy_hint)
         city_radio.pack(side="left")
 
         #Input and Generate Button
         input_frame = tk.Frame(occupancy_frame, bg=WHITE)
         input_frame.pack(fill="x", padx=15, pady=10)
 
+        self.occupancy_hint_label = tk.Label(input_frame, text="Enter Apt Name/ID:", bg=WHITE, fg=TEXT, font=("Arial", 10))
+        self.occupancy_hint_label.pack(side="left", padx=(0, 5))
+
         self.occupancy_entry = tk.Entry(input_frame, width=20, bg=WHITE, fg=TEXT, insertbackground=TEXT, relief="solid", bd=1)
         self.occupancy_entry.pack(side="left", fill="x", expand=True)
 
         generate_btn = tk.Button(
             input_frame, text="Generate", bg=LIGHT_BUTTON, fg=TEXT, relief="flat", bd=0,
-            font=("Arial", 10, "bold"), cursor="hand2", activebackground=LIGHT_BUTTON_HOVER
+            font=("Arial", 10, "bold"), cursor="hand2", activebackground=LIGHT_BUTTON_HOVER,
+            command=self.generate_occupancy_report
         )
         generate_btn.pack(side="left", padx=(10, 0))
 
         #Placeholder for report content
-        report_placeholder = tk.Label(occupancy_frame, text="Occupancy report will appear here.", bg=WHITE, fg=SUBTEXT, font=("Arial", 11))
-        report_placeholder.pack(pady=20, padx=15)
+        self.occupancy_report_label = tk.Label(occupancy_frame, text="Select a filter, enter details, and click Generate.", bg=WHITE, fg=SUBTEXT, font=("Arial", 11), justify="left")
+        self.occupancy_report_label.pack(pady=20, padx=15, fill="x")
 
     def create_financial_section(self, parent):
         #Creates the UI for the financial summary
@@ -125,16 +129,26 @@ class ReportPage(tk.Frame):
         summary_content.pack(fill="both", expand=True, padx=15, pady=10)
 
         tk.Label(summary_content, text="Collected Rent:", bg=WHITE, fg=TEXT, font=("Arial", 11, "bold")).grid(row=0, column=0, sticky="w", pady=5)
-        tk.Label(summary_content, text="£0.00", bg=WHITE, fg="green", font=("Arial", 11)).grid(row=0, column=1, sticky="e", padx=10)
+        self.collected_rent_label = tk.Label(summary_content, text="£---", bg=WHITE, fg="green", font=("Arial", 11))
+        self.collected_rent_label.grid(row=0, column=1, sticky="e", padx=10)
         
         tk.Label(summary_content, text="Pending Rent:", bg=WHITE, fg=TEXT, font=("Arial", 11, "bold")).grid(row=1, column=0, sticky="w", pady=5)
-        tk.Label(summary_content, text="£0.00", bg=WHITE, fg="orange", font=("Arial", 11)).grid(row=1, column=1, sticky="e", padx=10)
+        self.pending_rent_label = tk.Label(summary_content, text="£---", bg=WHITE, fg="orange", font=("Arial", 11))
+        self.pending_rent_label.grid(row=1, column=1, sticky="e", padx=10)
         
         summary_content.grid_columnconfigure(1, weight=1)
 
+        # Refresh button
+        refresh_btn = tk.Button(
+            financial_frame, text="Refresh Financials", bg=LIGHT_BUTTON, fg=TEXT, relief="flat", bd=0,
+            font=("Arial", 10, "bold"), cursor="hand2", activebackground=LIGHT_BUTTON_HOVER,
+            command=self.refresh_financials
+        )
+        refresh_btn.pack(pady=(0, 10))
+
         #Placeholder for detailed financial report
-        report_placeholder = tk.Label(financial_frame, text="Financial details will appear here.", bg=WHITE, fg=SUBTEXT, font=("Arial", 11))
-        report_placeholder.pack(pady=20, padx=15)
+        self.fin_report_label = tk.Label(financial_frame, text="Financial details will appear here.", bg=WHITE, fg=SUBTEXT, font=("Arial", 11))
+        self.fin_report_label.pack(pady=10, padx=15)
 
     def create_maintenance_section(self, parent):
         #Creates the UI for tracking maintenance costs
@@ -146,16 +160,51 @@ class ReportPage(tk.Frame):
         maintenance_content.pack(fill="both", expand=True, padx=15, pady=10)
 
         tk.Label(maintenance_content, text="Total This Month:", bg=WHITE, fg=TEXT, font=("Arial", 11, "bold")).grid(row=0, column=0, sticky="w", pady=5)
-        tk.Label(maintenance_content, text="£0.00", bg=WHITE, fg="red", font=("Arial", 11)).grid(row=0, column=1, sticky="e", padx=10)
+        self.month_maintenance_label = tk.Label(maintenance_content, text="£---", bg=WHITE, fg="red", font=("Arial", 11))
+        self.month_maintenance_label.grid(row=0, column=1, sticky="e", padx=10)
         
         tk.Label(maintenance_content, text="Year-to-Date:", bg=WHITE, fg=TEXT, font=("Arial", 11, "bold")).grid(row=1, column=0, sticky="w", pady=5)
-        tk.Label(maintenance_content, text="£0.00", bg=WHITE, fg=TEXT, font=("Arial", 11)).grid(row=1, column=1, sticky="e", padx=10)
+        self.ytd_maintenance_label = tk.Label(maintenance_content, text="£---", bg=WHITE, fg=TEXT, font=("Arial", 11))
+        self.ytd_maintenance_label.grid(row=1, column=1, sticky="e", padx=10)
         
         maintenance_content.grid_columnconfigure(1, weight=1)
 
+        # Refresh button
+        refresh_btn = tk.Button(
+            maintenance_frame, text="Refresh Maintenance", bg=LIGHT_BUTTON, fg=TEXT, relief="flat", bd=0,
+            font=("Arial", 10, "bold"), cursor="hand2", activebackground=LIGHT_BUTTON_HOVER,
+            command=self.refresh_maintenance
+        )
+        refresh_btn.pack(pady=(0, 10))
+
         #Placeholder for maintenance log
-        report_placeholder = tk.Label(maintenance_frame, text="Maintenance log will appear here.", bg=WHITE, fg=SUBTEXT, font=("Arial", 11))
-        report_placeholder.pack(pady=20, padx=15)
+        self.maintenance_report_label = tk.Label(maintenance_frame, text="Maintenance log will appear here.", bg=WHITE, fg=SUBTEXT, font=("Arial", 11))
+        self.maintenance_report_label.pack(pady=10, padx=15)
+
+    def update_occupancy_hint(self):
+        filter_type = self.occupancy_filter_var.get()
+        if filter_type == "Apartment":
+            self.occupancy_hint_label.config(text="Enter Apt Name/ID:")
+        else:
+            self.occupancy_hint_label.config(text="Enter City Name:")
+
+    def generate_occupancy_report(self):
+        filter_type = self.occupancy_filter_var.get()
+        entered_val = self.occupancy_entry.get().strip()
+        if not entered_val:
+            self.occupancy_report_label.config(text=f"Error: Please enter a {filter_type.lower()} to generate.", fg="red")
+            return
+        
+        # TODO: Retrieve occupancy data from the database
+        self.occupancy_report_label.config(text=f"Retrieving occupancy data for {filter_type}:\n'{entered_val}'...", fg="blue")
+
+    def refresh_financials(self):
+        # TODO: Retrieve financial data from the database
+        self.fin_report_label.config(text="Fetching financial data...", fg="blue")
+
+    def refresh_maintenance(self):
+        # TODO: Retrieve maintenance data from the database
+        self.maintenance_report_label.config(text="Fetching maintenance logs...", fg="blue")
 
 if __name__ == '__main__':
     #Main application window for testing
