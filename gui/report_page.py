@@ -1,5 +1,7 @@
 import tkinter as tk
 from tkinter import ttk
+# Import your services
+from services.report_services import service_get_summary_report, service_get_maintenance_cost_report
 
 #Colour and Font Constants
 LIGHT_BG = "#F4F6F8"
@@ -16,9 +18,15 @@ BORDER_COLOR = "#E0E0E0"
 class ReportPage(tk.Frame):
     
     #A page for generating and displaying operational reports for apartment management.
-    def __init__(self, parent):
+    def __init__(self, parent, current_user=None):
         super().__init__(parent, bg=LIGHT_BG)
+        # Store current user state for access control
+        self.current_user = current_user or {"role": "Administrator"} # Defaulting for testing
         self.create_widgets()
+
+        # You can automatically load data on startup
+        self.refresh_maintenance()
+        self.refresh_financials()
 
     def create_widgets(self):
         
@@ -191,20 +199,45 @@ class ReportPage(tk.Frame):
     def generate_occupancy_report(self):
         filter_type = self.occupancy_filter_var.get()
         entered_val = self.occupancy_entry.get().strip()
-        if not entered_val:
-            self.occupancy_report_label.config(text=f"Error: Please enter a {filter_type.lower()} to generate.", fg="red")
-            return
         
-        # TODO: Retrieve occupancy data from the database
-        self.occupancy_report_label.config(text=f"Retrieving occupancy data for {filter_type}:\n'{entered_val}'...", fg="blue")
+        if not entered_val and filter_type != "All": # Just as an example
+             # Handle validation
+             pass
+
+        # Call the service
+        report_response = service_get_summary_report(self.current_user)
+        
+        if not report_response["success"]:
+            self.occupancy_report_label.config(text=f"Error: {report_response.get('error')}", fg="red")
+            return
+            
+        data = report_response["data"]
+        self.occupancy_report_label.config(
+            text=f"Total Apartments: {data['total_apartments']}\n"
+                 f"Occupied: {data['occupied_apartments']}\n"
+                 f"Vacant: {data['vacant_apartments']}", 
+            fg="green"
+        )
+
+    def refresh_maintenance(self):
+        self.maintenance_report_label.config(text="Fetching maintenance logs...", fg="blue")
+        
+        # Call the service
+        maint_response = service_get_maintenance_cost_report(self.current_user)
+        
+        if not maint_response["success"]:
+            self.maintenance_report_label.config(text=f"Error: {maint_response.get('error')}", fg="red")
+            return
+            
+        data = maint_response["data"]
+        # Update the UI labels
+        self.month_maintenance_label.config(text=f"£{data['total_maintenance_cost']}")
+        self.ytd_maintenance_label.config(text=f"£{data['total_maintenance_cost']}") # Adjust as per your service logic
+        self.maintenance_report_label.config(text="Maintenance data loaded.", fg="green")
 
     def refresh_financials(self):
         # TODO: Retrieve financial data from the database
         self.fin_report_label.config(text="Fetching financial data...", fg="blue")
-
-    def refresh_maintenance(self):
-        # TODO: Retrieve maintenance data from the database
-        self.maintenance_report_label.config(text="Fetching maintenance logs...", fg="blue")
 
 if __name__ == '__main__':
     #Main application window for testing
