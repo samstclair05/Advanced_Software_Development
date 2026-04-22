@@ -7,7 +7,6 @@ from gui.report_page import ReportPage
 from PIL import Image, ImageTk
 from database.db_connection import get_connection
 
-# worked by Htet, Lonique
 
 NAVY = "#1E2A38"
 BLUE = "#2F5D8C"

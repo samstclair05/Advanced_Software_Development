@@ -1,3 +1,5 @@
+#By Lonique
+
 from datetime import date, timedelta
 from models.tenant import get_all_tenants, get_tenant, add_tenant, update_tenant, delete_tenant
 from database.db_connection import get_connection
@@ -34,6 +36,10 @@ def service_get_all_tenants(current_user):
     access = _check_access(current_user, ROLES_CAN_VIEW)
     if not access["access"]:
         return {"success": False, "error": access["error"]}
+    
+    allowed, err = check_location_access(current_user, location)
+    if not allowed:
+        return {"success": False, "error": err}
     return {"success": True, "data": get_all_tenants()}
 
 
@@ -41,7 +47,12 @@ def service_get_tenant(current_user, tenant_id):
     access = _check_access(current_user, ROLES_CAN_VIEW)
     if not access["access"]:
         return {"success": False, "error": access["error"]}
+    
+    allowed, err = check_location_access(current_user, location)
+    if not allowed:
+        return {"success": False, "error": err}
     tenant = get_tenant(tenant_id)
+    
     if not tenant:
         return {"success": False, "error": f"Tenant ID {tenant_id} not found."}
     return {"success": True, "data": tenant}
@@ -53,6 +64,11 @@ def service_add_tenant(current_user, name, phone, email, occupation,
     if not access["access"]:
         return {"success": False, "error": access["error"]}
 
+
+    allowed, err = check_location_access(current_user, location)
+    if not allowed:
+        return {"success": False, "error": err}
+    
     cleaned_ni = ni_number.strip().upper()
 
     if cleaned_ni:
@@ -75,6 +91,10 @@ def service_update_tenant(current_user, tenant_id, name, phone, email, occupatio
     access = _check_access(current_user, ROLES_CAN_EDIT)
     if not access["access"]:
         return {"success": False, "error": access["error"]}
+    
+    allowed, err = check_location_access(current_user, location)
+    if not allowed:
+        return {"success": False, "error": err}
     if not get_tenant(tenant_id):
         return {"success": False, "error": f"Tenant ID {tenant_id} not found."}
 
@@ -89,6 +109,10 @@ def service_delete_tenant(current_user, tenant_id):
     access = _check_access(current_user, ROLES_CAN_DELETE)
     if not access["access"]:
         return {"success": False, "error": access["error"]}
+    
+    allowed, err = check_location_access(current_user, location)
+    if not allowed:
+        return {"success": False, "error": err}
     if not get_tenant(tenant_id):
         return {"success": False, "error": f"Tenant ID {tenant_id} not found."}
 
@@ -118,6 +142,9 @@ def service_assign_tenant_to_apartment(current_user, tenant_id, apartment_id,
     if not access["access"]:
         return {"success": False, "error": access["error"]}
 
+    allowed, err = check_location_access(current_user, location)
+    if not allowed:
+        return {"success": False, "error": err}
     if not get_tenant(tenant_id):
         return {"success": False, "error": f"Tenant ID {tenant_id} not found."}
 
@@ -130,6 +157,11 @@ def service_assign_tenant_to_apartment(current_user, tenant_id, apartment_id,
     if not apartment:
         conn.close()
         return {"success": False, "error": f"Apartment ID {apartment_id} not found."}
+    
+    allowed, err = check_location_access(current_user, location)
+    if not allowed:
+        return {"success": False, "error": err}
+    
     if dict(apartment)["occupancy_status"] != "Vacant":
         conn.close()
         return {"success": False, "error": f"Apartment {apartment_id} is not vacant."}
@@ -168,6 +200,10 @@ def service_terminate_lease(current_user, lease_id, early=False):
     if not access["access"]:
         return {"success": False, "error": access["error"]}
 
+    allowed, err = check_location_access(current_user, location)
+    if not allowed:
+        return {"success": False, "error": err}
+    
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM leases WHERE lease_id = ?", (lease_id,))
@@ -206,6 +242,10 @@ def service_get_tenant_lease_history(current_user, tenant_id):
     if not access["access"]:
         return {"success": False, "error": access["error"]}
 
+    allowed, err = check_location_access(current_user, location)
+    if not allowed:
+        return {"success": False, "error": err}
+    
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute(

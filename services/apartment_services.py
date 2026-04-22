@@ -1,7 +1,9 @@
-#By Lonique Mayouna
+#By Lonique Mayoua
+
 #partially edited by Htet Oo Wai
 from models.apartment import get_all_apartments, get_apartment, add_apartment, update_apartment, delete_apartment
 from database.db_connection import get_connection
+from services.location_guard import check_location_access
 
 # Roles 
 # Administrator:      full access for their location (add, edit, delete apartments)
@@ -27,17 +29,23 @@ def _check_access(current_user, allowed_roles):
 #Operations
 
 def service_get_all_apartments(current_user):
-    access = _check_access(current_user, ROLES_CAN_VIEW)
-    if not access["access"]:
-        return {"success": False, "error": access["error"]}
-    return {"success": True, "data": get_all_apartments()}
 
+    if current_user.get("role") != "Manager":
+        user_loc = current_user.get("location")
+        apartments = [a for a in apartments if a["location"] == user_loc]
+
+    return {"success": True, "data": apartments}
 
 def service_get_apartment(current_user, apartment_id):
     access = _check_access(current_user, ROLES_CAN_VIEW)
     if not access["access"]:
         return {"success": False, "error": access["error"]}
     apartment = get_apartment(apartment_id)
+
+    allowed, err = check_location_access(current_user, location)
+    if not allowed:
+        return {"success": False, "error": err}
+
     if not apartment:
         return {"success": False, "error": f"Apartment ID {apartment_id} not found."}
     return {"success": True, "data": apartment}
@@ -48,6 +56,10 @@ def service_get_apartments_by_location(current_user, location):
     access = _check_access(current_user, ROLES_CAN_VIEW)
     if not access["access"]:
         return {"success": False, "error": access["error"]}
+
+    allowed, err = check_location_access(current_user, location)
+    if not allowed:
+        return {"success": False, "error": err}
 
     conn = get_connection()
     cursor = conn.cursor()
@@ -61,6 +73,10 @@ def service_get_vacant_apartments(current_user):
     access = _check_access(current_user, ROLES_CAN_VIEW)
     if not access["access"]:
         return {"success": False, "error": access["error"]}
+
+    allowed, err = check_location_access(current_user, location)
+    if not allowed:
+        return {"success": False, "error": err}
 
     conn = get_connection()
     cursor = conn.cursor()
@@ -76,6 +92,11 @@ def service_add_apartment(current_user, location, apartment_type, num_rooms,
     if not access["access"]:
         return {"success": False, "error": access["error"]}
 
+
+    allowed, err = check_location_access(current_user, location)
+    if not allowed:
+        return {"success": False, "error": err}
+
     #use CRUD subroutines
     add_apartment(location, apartment_type, num_rooms, floor_number, monthly_rent, occupancy_status, notes)
     return {"success": True}
@@ -86,6 +107,11 @@ def service_update_apartment(current_user, apartment_id, location, apartment_typ
     access = _check_access(current_user, ROLES_CAN_EDIT)
     if not access["access"]:
         return {"success": False, "error": access["error"]}
+    
+    allowed, err = check_location_access(current_user, location)
+    if not allowed:
+        return {"success": False, "error": err}
+
     if not get_apartment(apartment_id):
         return {"success": False, "error": f"Apartment ID {apartment_id} not found."}
 
@@ -109,6 +135,12 @@ def service_delete_apartment(current_user, apartment_id):
     access = _check_access(current_user, ROLES_CAN_DELETE)
     if not access["access"]:
         return {"success": False, "error": access["error"]}
+    
+    allowed, err = check_location_access(current_user, location)
+    if not allowed:
+        return {"success": False, "error": err}
+
+
     if not get_apartment(apartment_id):
         return {"success": False, "error": f"Apartment ID {apartment_id} not found."}
 
@@ -134,6 +166,10 @@ def service_get_current_tenant(current_user, apartment_id):
     if not access["access"]:
         return {"success": False, "error": access["error"]}
 
+    allowed, err = check_location_access(current_user, location)
+    if not allowed:
+        return {"success": False, "error": err}
+    
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute(
@@ -153,6 +189,10 @@ def service_terminate_current_lease_for_apartment(current_user, apartment_id):
     if not access["access"]:
         return {"success": False, "error": access["error"]}
 
+    allowed, err = check_location_access(current_user, location)
+    if not allowed:
+        return {"success": False, "error": err}
+    
     conn = get_connection()
     cursor = conn.cursor()
 
