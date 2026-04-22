@@ -1,3 +1,5 @@
+#By Lonique Mayouna
+#partially edited by Htet Oo Wai
 from models.apartment import get_all_apartments, get_apartment, add_apartment, update_apartment, delete_apartment
 from database.db_connection import get_connection
 
@@ -8,9 +10,9 @@ from database.db_connection import get_connection
 # Finance Manager:    no apartment management access
 # Maintenance Staff:  no apartment management access
 
-ROLES_CAN_VIEW   = {"Front Desk Staff", "Administrator", "Manager"}
-ROLES_CAN_EDIT   = {"Administrator"}
-ROLES_CAN_DELETE = {"Administrator"}
+ROLES_CAN_VIEW   = {"front_desk", "administrator", "manager"}
+ROLES_CAN_EDIT   = {"administrator"}
+ROLES_CAN_DELETE = {"administrator"}
 
 
 def _check_access(current_user, allowed_roles):
@@ -145,3 +147,37 @@ def service_get_current_tenant(current_user, apartment_id):
     row = cursor.fetchone()
     conn.close()
     return {"success": True, "data": dict(row) if row else None}
+
+def service_terminate_current_lease_for_apartment(current_user, apartment_id):
+    access = _check_access(current_user, ROLES_CAN_DELETE)
+    if not access["access"]:
+        return {"success": False, "error": access["error"]}
+
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute(
+        "SELECT lease_id FROM leases WHERE apartment_id = ? AND status = 'Active'",
+        (apartment_id,)
+    )
+    lease = cursor.fetchone()
+
+    if not lease:
+        conn.close()
+        return {"success": False, "error": "No active lease found for this apartment."}
+
+    lease_id = lease["lease_id"]
+
+    cursor.execute(
+        "UPDATE leases SET status = 'Terminated' WHERE lease_id = ?",
+        (lease_id,)
+    )
+    cursor.execute(
+        "UPDATE apartments SET occupancy_status = 'Vacant' WHERE apartment_id = ?",
+        (apartment_id,)
+    )
+
+    conn.commit()
+    conn.close()
+
+    return {"success": True, "message": "Lease terminated successfully. Apartment is now Vacant."}
