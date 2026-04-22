@@ -21,3 +21,9 @@ python main.py
 ## If needed to initialise database (It is already included in the ZIP file ready to use but if you need to reinitalise it):
 python database/init_db.py
 python -m models.user
+
+Lonique Mayoua - Backend: Apartment services and Tenant Services, Location Access Handling(Front + Backend), Validation Checks, Debugging
+
+Htet Oo Wai - Frontend: Dahsboard, login, apartment, tenant, payment
+
+Samuel St Clair - All files under database folder, all files under model folder. Connected the database to each page, Update the readme with setup info, Maintenance page rework and functionality, dashboard information connected and updating with data, log-in page design and backend, testing log in page, testing
