@@ -21,7 +21,7 @@ python main.py
 ## If needed to initialise database (It is already included in the ZIP file ready to use but if you need to reinitalise it):
 python database/init_db.py
 python -m models.user
-
+## Contributions:
 Lonique Mayoua - Backend: Apartment services and Tenant Services, Report services rework and functionailty, Location Access Handling(Front + Backend), Validation Checks, Debugging
 
 Htet Oo Wai - Frontend: Dahsboard, login, apartment, tenant, payment
