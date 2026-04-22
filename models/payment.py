@@ -19,11 +19,22 @@ def get_payment(payment_id):
 def add_payment(tenant_id, apartment_id, amount, due_date, payment_date, status, invoice_number):
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute(
-        """INSERT INTO payments (tenant_id, apartment_id, amount, due_date, payment_date, status, invoice_number)
-           VALUES (?, ?, ?, ?, ?, ?, ?)""",
-        (tenant_id, apartment_id, amount, due_date, payment_date, status, invoice_number)
-    )
+
+    #insert first without invoice number
+    cursor.execute("""
+        INSERT INTO payments (tenant_id, apartment_id, amount, due_date, payment_date, status)
+        VALUES (?, ?, ?, ?, ?, ?)
+    """, (tenant_id, apartment_id, amount, due_date, payment_date, status))
+
+    payment_id = cursor.lastrowid
+
+    #generate invoice
+    invoice_number = f"INV-{payment_id}"
+
+    cursor.execute("""
+        UPDATE payments SET invoice_number = ? WHERE payment_id = ?
+    """, (invoice_number, payment_id))
+
     conn.commit()
     conn.close()
 
