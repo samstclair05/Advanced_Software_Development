@@ -1,7 +1,7 @@
 import tkinter as tk
 from tkinter import ttk
 # Import your services
-from services.report_services import service_get_summary_report, service_get_maintenance_cost_report
+from services.report_services import service_get_summary_report, service_get_maintenance_cost_report, service_get_financial_summary
 
 #Colour and Font Constants
 LIGHT_BG = "#F4F6F8"
@@ -92,39 +92,19 @@ class ReportPage(tk.Frame):
         occupancy_frame = self.create_section_frame(parent, "Occupancy Reports")
         occupancy_frame.grid(row=0, column=0, padx=(0, 10), pady=10, sticky="nsew")
 
-        #Filter controls
-        controls_frame = tk.Frame(occupancy_frame, bg=WHITE)
-        controls_frame.pack(fill="x", padx=15, pady=5)
-
-        tk.Label(controls_frame, text="Filter by:", bg=WHITE, fg=TEXT, font=("Arial", 11)).pack(side="left", anchor="w")
-        
-        self.occupancy_filter_var = tk.StringVar(value="Apartment")
-        
-        apartment_radio = tk.Radiobutton(controls_frame, text="Apartment", variable=self.occupancy_filter_var, value="Apartment", bg=WHITE, font=("Arial", 10), command=self.update_occupancy_hint)
-        apartment_radio.pack(side="left", padx=10)
-        
-        city_radio = tk.Radiobutton(controls_frame, text="City", variable=self.occupancy_filter_var, value="City", bg=WHITE, font=("Arial", 10), command=self.update_occupancy_hint)
-        city_radio.pack(side="left")
-
         #Input and Generate Button
         input_frame = tk.Frame(occupancy_frame, bg=WHITE)
         input_frame.pack(fill="x", padx=15, pady=10)
-
-        self.occupancy_hint_label = tk.Label(input_frame, text="Enter Apt Name/ID:", bg=WHITE, fg=TEXT, font=("Arial", 10))
-        self.occupancy_hint_label.pack(side="left", padx=(0, 5))
-
-        self.occupancy_entry = tk.Entry(input_frame, width=20, bg=WHITE, fg=TEXT, insertbackground=TEXT, relief="solid", bd=1)
-        self.occupancy_entry.pack(side="left", fill="x", expand=True)
 
         generate_btn = tk.Button(
             input_frame, text="Generate", bg=LIGHT_BUTTON, fg=TEXT, relief="flat", bd=0,
             font=("Arial", 10, "bold"), cursor="hand2", activebackground=LIGHT_BUTTON_HOVER,
             command=self.generate_occupancy_report
         )
-        generate_btn.pack(side="left", padx=(10, 0))
+        generate_btn.pack(pady=5)
 
         #Placeholder for report content
-        self.occupancy_report_label = tk.Label(occupancy_frame, text="Select a filter, enter details, and click Generate.", bg=WHITE, fg=SUBTEXT, font=("Arial", 11), justify="left")
+        self.occupancy_report_label = tk.Label(occupancy_frame, text="Click 'Generate' to see the latest occupancy summary.", bg=WHITE, fg=SUBTEXT, font=("Arial", 11), justify="left")
         self.occupancy_report_label.pack(pady=20, padx=15, fill="x")
 
     def create_financial_section(self, parent):
@@ -189,21 +169,7 @@ class ReportPage(tk.Frame):
         self.maintenance_report_label = tk.Label(maintenance_frame, text="Maintenance log will appear here.", bg=WHITE, fg=SUBTEXT, font=("Arial", 11))
         self.maintenance_report_label.pack(pady=10, padx=15)
 
-    def update_occupancy_hint(self):
-        filter_type = self.occupancy_filter_var.get()
-        if filter_type == "Apartment":
-            self.occupancy_hint_label.config(text="Enter Apt Name/ID:")
-        else:
-            self.occupancy_hint_label.config(text="Enter City Name:")
-
     def generate_occupancy_report(self):
-        filter_type = self.occupancy_filter_var.get()
-        entered_val = self.occupancy_entry.get().strip()
-        
-        if not entered_val and filter_type != "All": # Just as an example
-             # Handle validation
-             pass
-
         # Call the service
         report_response = service_get_summary_report(self.current_user)
         
@@ -236,8 +202,20 @@ class ReportPage(tk.Frame):
         self.maintenance_report_label.config(text="Maintenance data loaded.", fg="green")
 
     def refresh_financials(self):
-        # TODO: Retrieve financial data from the database
         self.fin_report_label.config(text="Fetching financial data...", fg="blue")
+        
+        # Call the service
+        fin_response = service_get_financial_summary(self.current_user)
+        
+        if not fin_response["success"]:
+            self.fin_report_label.config(text=f"Error: {fin_response.get('error')}", fg="red")
+            return
+            
+        data = fin_response["data"]
+        # Update the UI labels
+        self.collected_rent_label.config(text=f"£{data['collected_rent']:.2f}")
+        self.pending_rent_label.config(text=f"£{data['pending_rent']:.2f}")
+        self.fin_report_label.config(text="Financial data loaded.", fg="green")
 
 if __name__ == '__main__':
     #Main application window for testing

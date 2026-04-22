@@ -53,3 +53,28 @@ def service_get_maintenance_cost_report(current_user):
     conn.close()
 
     return {"success": True, "data": {"total_maintenance_cost": total_cost}}
+
+def service_get_financial_summary(current_user):
+    access = _check_access(current_user, ROLES_CAN_VIEW_REPORTS)
+    if not access["access"]: return {"success": False, "error": access["error"]}
+
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    # Calculate collected rent
+    cursor.execute("SELECT SUM(amount) as total FROM payments WHERE status != 'Pending'")
+    collected_rent = cursor.fetchone()["total"] or 0
+
+    # Calculate pending rent
+    cursor.execute("SELECT SUM(amount) as total FROM payments WHERE status = 'Pending'")
+    pending_rent = cursor.fetchone()["total"] or 0
+
+    conn.close()
+
+    return {
+        "success": True,
+        "data": {
+            "collected_rent": collected_rent,
+            "pending_rent": pending_rent
+        }
+    }
