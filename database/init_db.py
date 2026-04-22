@@ -1,4 +1,5 @@
-import os
+# Samuel St Clair
+# import os
 from db_connection import get_connection
 
 def init_db():
