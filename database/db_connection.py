@@ -1,3 +1,5 @@
+# Samuel St Clair
+
 import sqlite3
 import os
 

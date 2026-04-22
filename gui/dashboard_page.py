@@ -5,6 +5,7 @@ from gui.payment_page import PaymentPage
 from gui.maintenance_page import MaintenancePage
 from gui.report_page import ReportPage
 from PIL import Image, ImageTk
+from database.db_connection import get_connection
 
 # worked by Htet, Lonique
 
@@ -41,6 +42,26 @@ ROLE_ACCESS = {
 
 
 class DashboardPage(tk.Frame):
+
+    def get_stats(self):
+        conn = get_connection()
+        cursor = conn.cursor()
+        
+        cursor.execute("SELECT COUNT(*) FROM tenants")
+        total_tenants = cursor.fetchone()[0]
+        
+        cursor.execute("SELECT COUNT(*) FROM apartments WHERE occupancy_status = 'Occupied'")
+        occupied = cursor.fetchone()[0]
+        
+        cursor.execute("SELECT COUNT(*) FROM payments WHERE status = 'Pending'")
+        pending_payments = cursor.fetchone()[0]
+        
+        cursor.execute("SELECT COUNT(*) FROM maintenance_requests WHERE status NOT IN ('Resolved', 'Cancelled')")
+        open_requests = cursor.fetchone()[0]
+        
+        conn.close()
+        return total_tenants, occupied, pending_payments, open_requests
+
     def __init__(self, parent, user):
         super().__init__(parent, bg=LIGHT_BG)
         self.parent = parent
@@ -224,7 +245,7 @@ class DashboardPage(tk.Frame):
         if page_name == "dashboard":
             self.show_dashboard_home()
         elif page_name == "tenant":
-            page = TenantPage(self.content_frame)
+            page = TenantPage(self.content_frame, self.user)
             page.pack(fill="both", expand=True, padx=20, pady=20)
         elif page_name == "apartment":
             page = ApartmentPage(self.content_frame)
@@ -273,11 +294,12 @@ class DashboardPage(tk.Frame):
         #stats
         cards_frame = tk.Frame(self.content_frame, bg=LIGHT_BG)
         cards_frame.pack(pady=20)
+        total_tenants, occupied, pending_payments, open_requests = self.get_stats()
 
-        self.create_card(cards_frame, "Total Tenants", "128")
-        self.create_card(cards_frame, "Occupied Apartments", "94")
-        self.create_card(cards_frame, "Pending Payments", "12")
-        self.create_card(cards_frame, "Open Requests", "8")
+        self.create_card(cards_frame, "Total Tenants", str(total_tenants))
+        self.create_card(cards_frame, "Occupied Apartments", str(occupied))
+        self.create_card(cards_frame, "Pending Payments", str(pending_payments))
+        self.create_card(cards_frame, "Open Requests", str(open_requests))
 
     def create_card(self, parent, title, value):
         #card box
