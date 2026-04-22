@@ -1,7 +1,12 @@
 import tkinter as tk
-from tkinter import ttk
+from tkinter import ttk, messagebox
 from tkcalendar import DateEntry
-
+from services.payment_services import (
+    service_record_payment,
+    service_update_payment_status,
+    service_get_payment_history,
+    service_delete_payment
+)
 
 LIGHT_BG = "#F4F6F8"
 WHITE = "#FFFFFF"
@@ -12,9 +17,12 @@ LIGHT_BUTTON_HOVER = "#D1D5DB"
 
 
 class PaymentPage(tk.Frame):
-    def __init__(self, parent):
+    def __init__(self, parent, user):
         super().__init__(parent, bg=LIGHT_BG)
+        self.current_user = user
+        self.selected_payment_id = None
         self.create_widgets()
+        self.load_records()
 
     def create_widgets(self):
         #page title
@@ -97,7 +105,7 @@ class PaymentPage(tk.Frame):
         #row 4
         tk.Label(form_box, text="Invoice Number", bg=WHITE, fg=TEXT, font=("Arial", 11)).grid(row=3, column=0, padx=15, pady=12, sticky="w")
         self.invoice_entry = tk.Entry(form_box, width=25, bg="#F3F4F6", fg=TEXT, relief="solid", bd=1)
-        self.invoice_entry.insert(0, "INV-001")
+        self.invoice_entry.insert(0, "INV-AUTO")
         self.invoice_entry.config(state="readonly")
         self.invoice_entry.grid(row=3, column=1, padx=15, pady=12)
 
@@ -108,6 +116,7 @@ class PaymentPage(tk.Frame):
         tk.Button(
             button_frame,
             text="Record Payment",
+            command=self.handle_add,
             bg=LIGHT_BUTTON,
             fg=TEXT,
             activebackground=LIGHT_BUTTON_HOVER,
@@ -123,6 +132,23 @@ class PaymentPage(tk.Frame):
         tk.Button(
             button_frame,
             text="Update Status",
+            command=self.handle_update,
+            bg=LIGHT_BUTTON,
+            fg=TEXT,
+            activebackground=LIGHT_BUTTON_HOVER,
+            activeforeground=TEXT,
+            relief="flat",
+            bd=0,
+            width=16,
+            height=2,
+            font=("Arial", 11, "bold"),
+            cursor="hand2"
+        ).pack(side="left", padx=6)
+
+        tk.Button(
+            button_frame,
+            text="Delete Payment",
+            command=self.handle_delete,
             bg=LIGHT_BUTTON,
             fg=TEXT,
             activebackground=LIGHT_BUTTON_HOVER,
@@ -138,6 +164,7 @@ class PaymentPage(tk.Frame):
         tk.Button(
             button_frame,
             text="Clear",
+            command=self.handle_clear,
             bg=LIGHT_BUTTON,
             fg=TEXT,
             activebackground=LIGHT_BUTTON_HOVER,
@@ -162,7 +189,7 @@ class PaymentPage(tk.Frame):
         #records title
         records_title = tk.Label(
             records_box,
-            text="Payment Records",
+            text="Payment History",
             bg=WHITE,
             fg=TEXT,
             font=("Arial", 14, "bold")
@@ -170,13 +197,24 @@ class PaymentPage(tk.Frame):
         records_title.pack(anchor="w", padx=15, pady=(15, 10))
 
         #records table
-        columns = ("payment_id", "tenant_id", "apartment_id", "amount", "payment_date", "status", "invoice_number")
+        columns = (
+            "payment_id",
+            "tenant_id",
+            "apartment_id",
+            "amount",
+            "due_date",
+            "payment_date",
+            "status",
+            "invoice_number"
+        )
+
         self.tree = ttk.Treeview(records_box, columns=columns, show="headings", selectmode="browse")
 
         self.tree.heading("payment_id", text="Payment ID")
         self.tree.heading("tenant_id", text="Tenant ID")
         self.tree.heading("apartment_id", text="Apartment ID")
         self.tree.heading("amount", text="Amount")
+        self.tree.heading("due_date", text="Due Date")
         self.tree.heading("payment_date", text="Payment Date")
         self.tree.heading("status", text="Status")
         self.tree.heading("invoice_number", text="Invoice Number")
@@ -184,26 +222,152 @@ class PaymentPage(tk.Frame):
         self.tree.column("payment_id", width=90, anchor="center")
         self.tree.column("tenant_id", width=90, anchor="center")
         self.tree.column("apartment_id", width=100, anchor="center")
-        self.tree.column("amount", width=100, anchor="center")
-        self.tree.column("payment_date", width=120, anchor="center")
+        self.tree.column("amount", width=90, anchor="center")
+        self.tree.column("due_date", width=110, anchor="center")
+        self.tree.column("payment_date", width=110, anchor="center")
         self.tree.column("status", width=100, anchor="center")
         self.tree.column("invoice_number", width=120, anchor="center")
 
         self.tree.pack(fill="both", expand=True, padx=15, pady=(0, 15))
+        self.tree.bind("<<TreeviewSelect>>", self.on_row_select)
 
-    def load_payment_history(self, payment_rows):
-        #clear old rows
+    def load_records(self):
+        response = service_get_payment_history(self.current_user)
+
+        if not response["success"]:
+            messagebox.showerror("Error", response["error"])
+            return
+
         for row in self.tree.get_children():
             self.tree.delete(row)
 
-        #insert new rows
-        for payment in payment_rows:
+        for payment in response["data"]:
             self.tree.insert("", "end", values=(
-                payment.get("payment_id", ""),
-                payment.get("tenant_id", ""),
-                payment.get("apartment_id", ""),
-                payment.get("amount", ""),
-                payment.get("payment_date", ""),
-                payment.get("status", ""),
-                payment.get("invoice_number", "")
+                payment["payment_id"],
+                payment["tenant_id"],
+                payment["apartment_id"],
+                payment["amount"],
+                payment["due_date"],
+                payment["payment_date"],
+                payment["status"],
+                payment["invoice_number"]
             ))
+
+    def on_row_select(self, event):
+        selected = self.tree.selection()
+        if not selected:
+            return
+
+        values = self.tree.item(selected, "values")
+        self.handle_clear()
+
+        self.selected_payment_id = values[0]
+        self.tenant_id_entry.insert(0, values[1])
+        self.apartment_id_entry.insert(0, values[2])
+        self.amount_entry.insert(0, values[3])
+
+        if values[4]:
+            self.due_date_entry.set_date(values[4])
+
+        if values[5]:
+            self.payment_date_entry.set_date(values[5])
+
+        self.status_var.set(values[6] if values[6] else "Pending")
+
+        self.invoice_entry.config(state="normal")
+        self.invoice_entry.delete(0, tk.END)
+        self.invoice_entry.insert(0, values[7])
+        self.invoice_entry.config(state="readonly")
+
+    def handle_add(self):
+        tenant_id = self.tenant_id_entry.get().strip()
+        apartment_id = self.apartment_id_entry.get().strip()
+        amount_text = self.amount_entry.get().strip()
+        due_date = self.due_date_entry.get()
+        payment_date = self.payment_date_entry.get()
+        status = self.status_var.get()
+        invoice_number = None
+
+        if not tenant_id or not apartment_id or not amount_text:
+            messagebox.showwarning("Missing Fields", "Tenant ID, Apartment ID, and Amount are required.")
+            return
+
+        try:
+            amount = float(amount_text)
+        except ValueError:
+            messagebox.showerror("Invalid Input", "Amount must be a valid number.")
+            return
+
+        response = service_record_payment(
+            self.current_user,
+            tenant_id,
+            apartment_id,
+            amount,
+            due_date,
+            payment_date,
+            status,
+            invoice_number
+        )
+
+        if not response["success"]:
+            messagebox.showerror("Error", response["error"])
+            return
+
+        messagebox.showinfo("Success", response["message"])
+        self.handle_clear()
+        self.load_records()
+
+    def handle_update(self):
+        if not self.selected_payment_id:
+            messagebox.showwarning("No Selection", "Please select a payment record to update.")
+            return
+
+        response = service_update_payment_status(
+            self.current_user,
+            self.selected_payment_id,
+            self.status_var.get()
+        )
+
+        if not response["success"]:
+            messagebox.showerror("Error", response["error"])
+            return
+
+        messagebox.showinfo("Success", response["message"])
+        self.handle_clear()
+        self.load_records()
+
+    def handle_delete(self):
+        if not self.selected_payment_id:
+            messagebox.showwarning("No Selection", "Please select a payment record to delete.")
+            return
+
+        confirm = messagebox.askyesno("Confirm Delete", "Are you sure you want to delete this payment?")
+        if not confirm:
+            return
+
+        response = service_delete_payment(self.current_user, self.selected_payment_id)
+
+        if not response["success"]:
+            messagebox.showerror("Error", response["error"])
+            return
+
+        messagebox.showinfo("Success", response["message"])
+        self.handle_clear()
+        self.load_records()
+
+    def handle_clear(self):
+        self.selected_payment_id = None
+
+        self.tenant_id_entry.delete(0, tk.END)
+        self.apartment_id_entry.delete(0, tk.END)
+        self.amount_entry.delete(0, tk.END)
+
+        self.status_var.set("Pending")
+
+        self.due_date_entry.set_date(self.due_date_entry._date)
+        self.payment_date_entry.set_date(self.payment_date_entry._date)
+
+        self.invoice_entry.config(state="normal")
+        self.invoice_entry.delete(0, tk.END)
+        self.invoice_entry.insert(0, "INV-AUTO")
+        self.invoice_entry.config(state="readonly")
