@@ -9,10 +9,10 @@ from database.db_connection import get_connection
 # Finance Manager:   no tenant management access
 # Maintenance Staff: no tenant management access
 
-ROLES_CAN_VIEW   = {"Front Desk Staff", "Administrator", "Manager"}
-ROLES_CAN_EDIT   = {"Front Desk Staff", "Administrator"}
-ROLES_CAN_DELETE = {"Administrator"}
-ROLES_CAN_ASSIGN = {"Front Desk Staff", "Administrator"}
+ROLES_CAN_VIEW   = {"front_desk", "administrator", "manager"}
+ROLES_CAN_EDIT   = {"front_desk", "administrator"}
+ROLES_CAN_DELETE = {"administrator"}
+ROLES_CAN_ASSIGN = {"front_desk", "administrator"}
 
 
 def _check_access(current_user, allowed_roles):
@@ -24,7 +24,7 @@ def _check_access(current_user, allowed_roles):
         return {"access": False, "error": "No user is logged in."}
     role = current_user.get("role")
     if role not in allowed_roles:
-        return {"access": False, "error": f"Access denied. Your role as a'{role}' cannot perform this action."}
+        return {"access": False, "error": f"Access denied. Your role '{role}' cannot perform this action."}
     return {"access": True}
 
 
@@ -53,16 +53,19 @@ def service_add_tenant(current_user, name, phone, email, occupation,
     if not access["access"]:
         return {"success": False, "error": access["error"]}
 
-    # Duplicate NI check before calling the model
-    conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute("SELECT tenant_id FROM tenants WHERE ni_number = ?", (ni_number.strip().upper(),))
-    if cursor.fetchone():
-        conn.close()
-        return {"success": False, "error": f"A tenant with NI number '{ni_number}' already exists."}
-    conn.close()
+    cleaned_ni = ni_number.strip().upper()
 
-    #call CRUD subroutines
+    if cleaned_ni:
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT tenant_id FROM tenants WHERE ni_number = ?", (cleaned_ni,))
+        if cursor.fetchone():
+            conn.close()
+            return {"success": False, "error": f"A tenant with NI number '{ni_number}' already exists."}
+        conn.close()
+
+    ni_number = cleaned_ni
+
     add_tenant(name, phone, email, occupation, ni_number, lease_period, reference, apartment_requirement)
     return {"success": True}
 
@@ -75,7 +78,8 @@ def service_update_tenant(current_user, tenant_id, name, phone, email, occupatio
     if not get_tenant(tenant_id):
         return {"success": False, "error": f"Tenant ID {tenant_id} not found."}
 
-    #call CRUD subroutines
+    ni_number = ni_number.strip().upper()
+
     update_tenant(tenant_id, name, phone, email, occupation, ni_number,
                   lease_period, reference, apartment_requirement)
     return {"success": True}
