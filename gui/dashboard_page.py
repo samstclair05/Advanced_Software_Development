@@ -248,7 +248,7 @@ class DashboardPage(tk.Frame):
             page = TenantPage(self.content_frame, self.user)
             page.pack(fill="both", expand=True, padx=20, pady=20)
         elif page_name == "apartment":
-            page = ApartmentPage(self.content_frame)
+            page = ApartmentPage(self.content_frame, self.user)
             page.pack(fill="both", expand=True, padx=20, pady=20)
         elif page_name == "payment":
             page = PaymentPage(self.content_frame, self.user)
