@@ -4,6 +4,7 @@
 
 ## Install dependencies
 pip install Pillow
+pip3 install tkcalendar
 
 ## How to run:
 python main.py

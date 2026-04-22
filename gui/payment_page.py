@@ -1,4 +1,6 @@
 import tkinter as tk
+from tkinter import ttk
+from tkcalendar import DateEntry
 
 
 LIGHT_BG = "#F4F6F8"
@@ -54,31 +56,50 @@ class PaymentPage(tk.Frame):
         self.tenant_id_entry = tk.Entry(form_box, width=25, bg="white", fg=TEXT, insertbackground=TEXT, relief="solid", bd=1)
         self.tenant_id_entry.grid(row=0, column=1, padx=15, pady=12)
 
-        tk.Label(form_box, text="Amount", bg=WHITE, fg=TEXT, font=("Arial", 11)).grid(row=0, column=2, padx=15, pady=12, sticky="w")
-        self.amount_entry = tk.Entry(form_box, width=25, bg="white", fg=TEXT, insertbackground=TEXT, relief="solid", bd=1)
-        self.amount_entry.grid(row=0, column=3, padx=15, pady=12)
+        tk.Label(form_box, text="Apartment ID", bg=WHITE, fg=TEXT, font=("Arial", 11)).grid(row=0, column=2, padx=15, pady=12, sticky="w")
+        self.apartment_id_entry = tk.Entry(form_box, width=25, bg="white", fg=TEXT, insertbackground=TEXT, relief="solid", bd=1)
+        self.apartment_id_entry.grid(row=0, column=3, padx=15, pady=12)
 
         #row 2
-        tk.Label(form_box, text="Due Date", bg=WHITE, fg=TEXT, font=("Arial", 11)).grid(row=1, column=0, padx=15, pady=12, sticky="w")
-        self.due_date_entry = tk.Entry(form_box, width=25, bg="white", fg=TEXT, insertbackground=TEXT, relief="solid", bd=1)
-        self.due_date_entry.grid(row=1, column=1, padx=15, pady=12)
+        tk.Label(form_box, text="Amount", bg=WHITE, fg=TEXT, font=("Arial", 11)).grid(row=1, column=0, padx=15, pady=12, sticky="w")
+        self.amount_entry = tk.Entry(form_box, width=25, bg="white", fg=TEXT, insertbackground=TEXT, relief="solid", bd=1)
+        self.amount_entry.grid(row=1, column=1, padx=15, pady=12)
 
-        tk.Label(form_box, text="Payment Date", bg=WHITE, fg=TEXT, font=("Arial", 11)).grid(row=1, column=2, padx=15, pady=12, sticky="w")
-        self.payment_date_entry = tk.Entry(form_box, width=25, bg="white", fg=TEXT, insertbackground=TEXT, relief="solid", bd=1)
-        self.payment_date_entry.grid(row=1, column=3, padx=15, pady=12)
+        tk.Label(form_box, text="Due Date", bg=WHITE, fg=TEXT, font=("Arial", 11)).grid(row=1, column=2, padx=15, pady=12, sticky="w")
+        self.due_date_entry = DateEntry(
+            form_box,
+            width=23,
+            background="#2F5D8C",
+            foreground="white",
+            borderwidth=1,
+            date_pattern="yyyy-mm-dd"
+        )
+        self.due_date_entry.grid(row=1, column=3, padx=15, pady=12)
 
         #row 3
-        tk.Label(form_box, text="Payment Status", bg=WHITE, fg=TEXT, font=("Arial", 11)).grid(row=2, column=0, padx=15, pady=12, sticky="w")
+        tk.Label(form_box, text="Payment Date", bg=WHITE, fg=TEXT, font=("Arial", 11)).grid(row=2, column=0, padx=15, pady=12, sticky="w")
+        self.payment_date_entry = DateEntry(
+            form_box,
+            width=23,
+            background="#2F5D8C",
+            foreground="white",
+            borderwidth=1,
+            date_pattern="yyyy-mm-dd"
+        )
+        self.payment_date_entry.grid(row=2, column=1, padx=15, pady=12)
+
+        tk.Label(form_box, text="Payment Status", bg=WHITE, fg=TEXT, font=("Arial", 11)).grid(row=2, column=2, padx=15, pady=12, sticky="w")
         self.status_var = tk.StringVar(value="Pending")
         status_menu = tk.OptionMenu(form_box, self.status_var, "Pending", "Paid", "Late", "Overdue")
         status_menu.config(width=22, bg=WHITE, fg=TEXT, relief="solid", bd=1, highlightthickness=0)
-        status_menu.grid(row=2, column=1, padx=15, pady=12, sticky="w")
+        status_menu.grid(row=2, column=3, padx=15, pady=12, sticky="w")
 
-        tk.Label(form_box, text="Invoice Number", bg=WHITE, fg=TEXT, font=("Arial", 11)).grid(row=2, column=2, padx=15, pady=12, sticky="w")
+        #row 4
+        tk.Label(form_box, text="Invoice Number", bg=WHITE, fg=TEXT, font=("Arial", 11)).grid(row=3, column=0, padx=15, pady=12, sticky="w")
         self.invoice_entry = tk.Entry(form_box, width=25, bg="#F3F4F6", fg=TEXT, relief="solid", bd=1)
         self.invoice_entry.insert(0, "INV-001")
         self.invoice_entry.config(state="readonly")
-        self.invoice_entry.grid(row=2, column=3, padx=15, pady=12)
+        self.invoice_entry.grid(row=3, column=1, padx=15, pady=12)
 
         #button area
         button_frame = tk.Frame(self, bg=LIGHT_BG)
@@ -148,12 +169,41 @@ class PaymentPage(tk.Frame):
         )
         records_title.pack(anchor="w", padx=15, pady=(15, 10))
 
-        #records text
-        table_placeholder = tk.Label(
-            records_box,
-            text="Payment records table will appear here",
-            bg=WHITE,
-            fg=SUBTEXT,
-            font=("Arial", 11)
-        )
-        table_placeholder.pack(pady=30)
+        #records table
+        columns = ("payment_id", "tenant_id", "apartment_id", "amount", "payment_date", "status", "invoice_number")
+        self.tree = ttk.Treeview(records_box, columns=columns, show="headings", selectmode="browse")
+
+        self.tree.heading("payment_id", text="Payment ID")
+        self.tree.heading("tenant_id", text="Tenant ID")
+        self.tree.heading("apartment_id", text="Apartment ID")
+        self.tree.heading("amount", text="Amount")
+        self.tree.heading("payment_date", text="Payment Date")
+        self.tree.heading("status", text="Status")
+        self.tree.heading("invoice_number", text="Invoice Number")
+
+        self.tree.column("payment_id", width=90, anchor="center")
+        self.tree.column("tenant_id", width=90, anchor="center")
+        self.tree.column("apartment_id", width=100, anchor="center")
+        self.tree.column("amount", width=100, anchor="center")
+        self.tree.column("payment_date", width=120, anchor="center")
+        self.tree.column("status", width=100, anchor="center")
+        self.tree.column("invoice_number", width=120, anchor="center")
+
+        self.tree.pack(fill="both", expand=True, padx=15, pady=(0, 15))
+
+    def load_payment_history(self, payment_rows):
+        #clear old rows
+        for row in self.tree.get_children():
+            self.tree.delete(row)
+
+        #insert new rows
+        for payment in payment_rows:
+            self.tree.insert("", "end", values=(
+                payment.get("payment_id", ""),
+                payment.get("tenant_id", ""),
+                payment.get("apartment_id", ""),
+                payment.get("amount", ""),
+                payment.get("payment_date", ""),
+                payment.get("status", ""),
+                payment.get("invoice_number", "")
+            ))
