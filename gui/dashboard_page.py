@@ -7,6 +7,7 @@ from gui.report_page import ReportPage
 from PIL import Image, ImageTk
 from database.db_connection import get_connection
 
+# worked by Htet, Lonique
 
 NAVY = "#1E2A38"
 BLUE = "#2F5D8C"
@@ -21,6 +22,14 @@ ROLE_LABELS = {
     "maintenance_staff": "Maintenance Staff",
     "administrator": "Administrator",
     "manager": "Manager"
+}
+
+LOCATION_LABELS = {
+    "location1": "Bristol",
+    "location2": "Cardiff",
+    "location3": "Manchester",
+    "location4": "London",
+
 }
 
 ROLE_ACCESS = {
@@ -60,6 +69,9 @@ class DashboardPage(tk.Frame):
         self.user = user
         self.role = user.get("role", "front_desk")
         self.role_display = ROLE_LABELS.get(self.role, "Front Desk Staff")
+        self.location = user.get("location", "Brisol")
+        self.location_display = LOCATION_LABELS.get(self.location, "Bristol")
+        self.location = LOCATION_LABELS.get(self.location, "Bristol")
         self.allowed_pages = ROLE_ACCESS.get(self.role, ["dashboard"])
         self.sidebar_visible = True
 
@@ -103,6 +115,16 @@ class DashboardPage(tk.Frame):
             font=("Arial", 11)
         )
         role_label.pack(side="right", padx=20)
+
+        #location label
+        location_label = tk.Label(
+            self.topbar,
+            text=f"Location: {self.location_display}",
+            bg=NAVY,
+            fg="white",
+            font=("Arial", 11)
+        )
+        location_label.pack(side="bottom", padx=20)
 
         #main area
         self.main_area = tk.Frame(self, bg=LIGHT_BG)
@@ -226,7 +248,7 @@ class DashboardPage(tk.Frame):
             page = TenantPage(self.content_frame, self.user)
             page.pack(fill="both", expand=True, padx=20, pady=20)
         elif page_name == "apartment":
-            page = ApartmentPage(self.content_frame)
+            page = ApartmentPage(self.content_frame, self.user)
             page.pack(fill="both", expand=True, padx=20, pady=20)
         elif page_name == "payment":
             page = PaymentPage(self.content_frame, self.user)

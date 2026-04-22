@@ -1,6 +1,7 @@
 import tkinter as tk
 from gui.login_page import LoginPage
 
+
 def main():
     print("App starting...")
     #create the main application window

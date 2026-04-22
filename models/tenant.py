@@ -1,3 +1,5 @@
+# Samuel St Clair
+
 from database.db_connection import get_connection
 
 def get_all_tenants():
