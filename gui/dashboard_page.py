@@ -223,7 +223,7 @@ class DashboardPage(tk.Frame):
         if page_name == "dashboard":
             self.show_dashboard_home()
         elif page_name == "tenant":
-            page = TenantPage(self.content_frame)
+            page = TenantPage(self.content_frame, self.user)
             page.pack(fill="both", expand=True, padx=20, pady=20)
         elif page_name == "apartment":
             page = ApartmentPage(self.content_frame)

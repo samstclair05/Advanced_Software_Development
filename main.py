@@ -8,7 +8,7 @@ def main():
 
     #set window title and size
     root.title("Paragon Apartment Management System")
-    root.geometry("1200x700")
+    root.state("zoomed")
 
     #disable resizing for now to keep layout consistent
     root.resizable(False, False)
