@@ -1,6 +1,6 @@
 from database.db_connection import get_connection
 
-ROLES_CAN_VIEW_REPORTS = {"Administrator", "Manager", "Finance Manager"}
+ROLES_CAN_VIEW_REPORTS = {"administrator", "manager", "finance_manager"}
 
 VALID_LOCATIONS = {"Bristol", "Cardiff", "London", "Manchester"}
 
@@ -23,7 +23,7 @@ def _resolve_location(current_user, requested_location=None):
     role = current_user.get("role")
     user_location = current_user.get("location")
 
-    if role == "Administrator":
+    if role == "administrator":
         if requested_location:
             normalised = requested_location.strip().title()
             if normalised not in VALID_LOCATIONS:
@@ -124,4 +124,57 @@ def service_get_maintenance_cost_report(current_user, requested_location=None):
         "success": True,
         "location": location,
         "data": {"total_maintenance_cost": total_cost}
+    }
+
+
+def service_get_financial_summary(current_user, requested_location=None):
+    access = _check_access(current_user, ROLES_CAN_VIEW_REPORTS)
+    if not access["access"]:
+        return {"success": False, "error": access["error"]}
+
+    # Prompt Administrator to pick a location before generating the report
+    if current_user.get("role", "").lower() == "administrator" and not requested_location:
+        return {
+            "success": False,
+            "prompt_location": True,
+            "valid_locations": sorted(VALID_LOCATIONS),
+            "message": "Please select a location to generate the financial summary for: Bristol, Cardiff, London, Manchester."
+        }
+
+    location, err = _resolve_location(current_user, requested_location)
+    if err:
+        return {"success": False, "error": err}
+
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    # Calculate collected rent for location
+    cursor.execute(
+        """SELECT SUM(p.amount) as total
+           FROM payments p
+           JOIN apartments a ON p.apartment_id = a.apartment_id
+           WHERE p.status != 'Pending' AND a.location = ?""",
+        (location,)
+    )
+    collected_rent = cursor.fetchone()["total"] or 0
+
+    # Calculate pending rent for location
+    cursor.execute(
+        """SELECT SUM(p.amount) as total
+           FROM payments p
+           JOIN apartments a ON p.apartment_id = a.apartment_id
+           WHERE p.status = 'Pending' AND a.location = ?""",
+        (location,)
+    )
+    pending_rent = cursor.fetchone()["total"] or 0
+
+    conn.close()
+
+    return {
+        "success": True,
+        "location": location,
+        "data": {
+            "collected_rent": collected_rent,
+            "pending_rent": pending_rent
+        }
     }

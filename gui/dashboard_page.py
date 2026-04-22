@@ -24,10 +24,10 @@ ROLE_LABELS = {
 }
 
 LOCATION_LABELS = {
-    "location1": "Bristol",
-    "location2": "Cardiff",
-    "location3": "Manchester",
-    "location4": "London",
+    "bristol": "Bristol",
+    "cardiff": "Cardiff",
+    "manchester": "Manchester",
+    "london": "London",
 
 }
 
@@ -68,9 +68,8 @@ class DashboardPage(tk.Frame):
         self.user = user
         self.role = user.get("role", "front_desk")
         self.role_display = ROLE_LABELS.get(self.role, "Front Desk Staff")
-        self.location = user.get("location", "Brisol")
-        self.location_display = LOCATION_LABELS.get(self.location, "Bristol")
-        self.location = LOCATION_LABELS.get(self.location, "Bristol")
+        self.location = user.get("location", "Bristol")
+        self.location_display = self.location
         self.allowed_pages = ROLE_ACCESS.get(self.role, ["dashboard"])
         self.sidebar_visible = True
 
@@ -256,7 +255,7 @@ class DashboardPage(tk.Frame):
             page = MaintenancePage(self.content_frame)
             page.pack(fill="both", expand=True, padx=20, pady=20)
         elif page_name == "report":
-            page = ReportPage(self.content_frame)
+            page = ReportPage(self.content_frame, self.user)
             page.pack(fill="both", expand=True, padx=20, pady=20)
 
     def show_dashboard_home(self):

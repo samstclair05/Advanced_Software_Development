@@ -10,7 +10,7 @@ def get_user(username):
     conn.close()
     return dict(row) if row else None
 
-def add_user(username, password, role="front_desk", location=None):
+def add_user(username, password, role="front_desk", location="Bristol"):
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute(
