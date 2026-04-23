@@ -1,5 +1,5 @@
 # Samuel St Clair - 24022864
-
+#Lonique Mayoua 24027374
 
 from database.db_connection import get_connection
 
