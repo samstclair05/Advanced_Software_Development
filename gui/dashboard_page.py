@@ -28,7 +28,6 @@ LOCATION_LABELS = {
     "cardiff": "Cardiff",
     "manchester": "Manchester",
     "london": "London",
-
 }
 
 ROLE_ACCESS = {
@@ -36,7 +35,7 @@ ROLE_ACCESS = {
     "finance_manager": ["dashboard", "payment", "report"],
     "maintenance_staff": ["dashboard", "maintenance"],
     "administrator": ["dashboard", "tenant", "apartment", "payment", "maintenance", "report"],
-    "manager": ["dashboard", "report"]
+    "manager": ["dashboard", "apartment", "report"]
 }
 
 
@@ -45,19 +44,19 @@ class DashboardPage(tk.Frame):
     def get_stats(self):
         conn = get_connection()
         cursor = conn.cursor()
-        
+
         cursor.execute("SELECT COUNT(*) FROM tenants")
         total_tenants = cursor.fetchone()[0]
-        
+
         cursor.execute("SELECT COUNT(*) FROM apartments WHERE occupancy_status = 'Occupied'")
         occupied = cursor.fetchone()[0]
-        
+
         cursor.execute("SELECT COUNT(*) FROM payments WHERE status = 'Pending'")
         pending_payments = cursor.fetchone()[0]
-        
+
         cursor.execute("SELECT COUNT(*) FROM maintenance_requests WHERE status NOT IN ('Resolved', 'Cancelled')")
         open_requests = cursor.fetchone()[0]
-        
+
         conn.close()
         return total_tenants, occupied, pending_payments, open_requests
 
@@ -68,8 +67,11 @@ class DashboardPage(tk.Frame):
         self.user = user
         self.role = user.get("role", "front_desk")
         self.role_display = ROLE_LABELS.get(self.role, "Front Desk Staff")
-        self.location = user.get("location", "Bristol")
-        self.location_display = self.location
+
+        raw_location = user.get("location", "bristol")
+        self.location = raw_location
+        self.location_display = LOCATION_LABELS.get(str(raw_location).lower(), str(raw_location))
+
         self.allowed_pages = ROLE_ACCESS.get(self.role, ["dashboard"])
         self.sidebar_visible = True
 
@@ -206,10 +208,7 @@ class DashboardPage(tk.Frame):
         )
         nav_label.pack(fill="x", pady=6)
 
-        #click to open page
         nav_label.bind("<Button-1>", lambda event: command())
-
-        #hover effect
         nav_label.bind("<Enter>", lambda event: nav_label.config(bg=BLUE))
         nav_label.bind("<Leave>", lambda event: nav_label.config(bg=NAVY))
 
@@ -262,7 +261,6 @@ class DashboardPage(tk.Frame):
         #hero image section
         img = Image.open("assets/apartment.jpg")
         img = img.resize((1100, 220))
-
         photo = ImageTk.PhotoImage(img)
 
         img_label = tk.Label(self.content_frame, image=photo, bg=LIGHT_BG)
@@ -300,7 +298,6 @@ class DashboardPage(tk.Frame):
         self.create_card(cards_frame, "Open Requests", str(open_requests))
 
     def create_card(self, parent, title, value):
-        #card box
         card = tk.Frame(
             parent,
             bg=WHITE,
@@ -312,7 +309,6 @@ class DashboardPage(tk.Frame):
         card.pack(side="left", padx=12, pady=5)
         card.pack_propagate(False)
 
-        #card title
         title_label = tk.Label(
             card,
             text=title,
@@ -322,7 +318,6 @@ class DashboardPage(tk.Frame):
         )
         title_label.pack(anchor="w", padx=15, pady=(20, 5))
 
-        #card value
         value_label = tk.Label(
             card,
             text=value,
@@ -333,7 +328,6 @@ class DashboardPage(tk.Frame):
         value_label.pack(anchor="w", padx=15)
 
     def show_placeholder(self, title_text, message):
-        #page title
         title = tk.Label(
             self.content_frame,
             text=title_text,
@@ -343,7 +337,6 @@ class DashboardPage(tk.Frame):
         )
         title.pack(anchor="nw", padx=20, pady=(20, 10))
 
-        #placeholder box
         box = tk.Frame(
             self.content_frame,
             bg=WHITE,
@@ -352,7 +345,6 @@ class DashboardPage(tk.Frame):
         )
         box.pack(fill="both", expand=True, padx=20, pady=20)
 
-        #placeholder text
         msg = tk.Label(
             box,
             text=message,
@@ -365,7 +357,6 @@ class DashboardPage(tk.Frame):
     def show_unauthorized(self, page_name):
         self.clear_content()
 
-        #page title
         title = tk.Label(
             self.content_frame,
             text="Access Denied",
@@ -375,7 +366,6 @@ class DashboardPage(tk.Frame):
         )
         title.pack(anchor="nw", padx=20, pady=(20, 10))
 
-        #message box
         box = tk.Frame(
             self.content_frame,
             bg=WHITE,
