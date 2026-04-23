@@ -1,10 +1,5 @@
-<<<<<<< HEAD
 #Lonique Mayoua 24027974
-=======
-
 # Samuel St Clair - 24022864
->>>>>>> 60d2b04c70677baec2e7505f1b5027791619e2db
-
 #by Htet Oo Wai - 24037079
 import tkinter as tk
 from gui.tenant_page import TenantPage
