@@ -24,6 +24,7 @@ class ApartmentPage(tk.Frame):
         self.current_user = user
         self.selected_apartment_id = None
         self.all_apartments = []
+        self.user_location = self.current_user.get("location", "Bristol")
 
         self.setup_scrollable_area()
         self.create_widgets()
@@ -53,6 +54,11 @@ class ApartmentPage(tk.Frame):
 
     def on_mousewheel(self, event):
         self.canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
+
+    def enforce_location_lock(self, *args):
+        if self.current_user.get("role") != "administrator":
+            if self.location_var.get() != self.user_location:
+                self.location_var.set(self.user_location)
 
     def sync_rooms(self, *args):
         mapping = {
@@ -163,8 +169,8 @@ class ApartmentPage(tk.Frame):
         self.apartment_id_entry.grid(row=0, column=1, padx=15, pady=12)
 
         tk.Label(form_box, text="Location", bg=WHITE, fg=TEXT, font=("Arial", 11)).grid(row=0, column=2, padx=15, pady=12, sticky="w")
-        self.location_var = tk.StringVar(value="Bristol")
-        location_menu = tk.OptionMenu(
+        self.location_var = tk.StringVar(value=self.user_location)
+        self.location_menu = tk.OptionMenu(
             form_box,
             self.location_var,
             "Bristol",
@@ -172,8 +178,9 @@ class ApartmentPage(tk.Frame):
             "Cardiff",
             "London"
         )
-        location_menu.config(width=22, bg=WHITE, fg=TEXT, relief="solid", bd=1, highlightthickness=0)
-        location_menu.grid(row=0, column=3, padx=15, pady=12, sticky="w")
+        self.location_menu.config(width=22, bg=WHITE, fg=TEXT, relief="solid", bd=1, highlightthickness=0)
+        self.location_menu.grid(row=0, column=3, padx=15, pady=12, sticky="w")
+        self.location_var.trace_add("write", self.enforce_location_lock)
         self.location_var.trace_add("write", self.suggest_rent)
 
         #row 2
@@ -218,8 +225,21 @@ class ApartmentPage(tk.Frame):
 
         #row 4
         tk.Label(form_box, text="Floor Number", bg=WHITE, fg=TEXT, font=("Arial", 11)).grid(row=3, column=0, padx=15, pady=12, sticky="w")
-        self.floor_entry = tk.Entry(form_box, width=25, bg="white", fg=TEXT, insertbackground=TEXT, relief="solid", bd=1)
-        self.floor_entry.grid(row=3, column=1, padx=15, pady=12)
+        self.floor_var = tk.StringVar(value="1")
+        floor_menu = tk.OptionMenu(
+            form_box,
+            self.floor_var,
+            "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10"
+        )
+        floor_menu.config(
+            width=22,
+            bg=WHITE,
+            fg=TEXT,
+            relief="solid",
+            bd=1,
+            highlightthickness=0
+        )
+        floor_menu.grid(row=3, column=1, padx=15, pady=12, sticky="w")
 
         tk.Label(form_box, text="Notes", bg=WHITE, fg=TEXT, font=("Arial", 11)).grid(row=3, column=2, padx=15, pady=12, sticky="w")
         self.notes_entry = tk.Entry(form_box, width=25, bg="white", fg=TEXT, insertbackground=TEXT, relief="solid", bd=1)
@@ -430,7 +450,7 @@ class ApartmentPage(tk.Frame):
         self.rooms_entry.insert(0, values[3])
         self.rooms_entry.config(state="readonly")
 
-        self.floor_entry.insert(0, values[4])
+        self.floor_var.set(str(values[4]))
         self.rent_entry.delete(0, tk.END)
         self.rent_entry.insert(0, values[5].replace("£", ""))
         self.status_var.set(values[6])
@@ -452,7 +472,7 @@ class ApartmentPage(tk.Frame):
 
         try:
             rooms = int(self.rooms_entry.get()) if self.rooms_entry.get().strip() else 0
-            floor = int(self.floor_entry.get()) if self.floor_entry.get().strip() else 0
+            floor = int(self.floor_var.get())
             rent = float(self.rent_entry.get()) if self.rent_entry.get().strip() else 0.0
         except ValueError:
             messagebox.showerror("Invalid Input", "Rooms and Floor must be whole numbers, and Rent must be a number.")
@@ -484,7 +504,7 @@ class ApartmentPage(tk.Frame):
 
         try:
             rooms = int(self.rooms_entry.get()) if self.rooms_entry.get().strip() else 0
-            floor = int(self.floor_entry.get()) if self.floor_entry.get().strip() else 0
+            floor = int(self.floor_var.get())
             rent = float(self.rent_entry.get()) if self.rent_entry.get().strip() else 0.0
         except ValueError:
             messagebox.showerror("Invalid Input", "Rooms and Floor must be whole numbers, and Rent must be a number.")
@@ -561,14 +581,14 @@ class ApartmentPage(tk.Frame):
         self.apartment_id_entry.delete(0, tk.END)
         self.apartment_id_entry.config(state="readonly")
 
-        self.location_var.set("Bristol")
+        self.location_var.set(self.user_location)
         self.type_var.set("Studio")
 
         self.rooms_entry.config(state="normal")
         self.rooms_entry.delete(0, tk.END)
         self.sync_rooms()
 
-        self.floor_entry.delete(0, tk.END)
+        self.floor_var.set("1")
         self.rent_entry.delete(0, tk.END)
         self.notes_entry.delete(0, tk.END)
 

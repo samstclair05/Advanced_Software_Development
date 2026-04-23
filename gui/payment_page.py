@@ -6,7 +6,8 @@ from services.payment_services import (
     service_record_payment,
     service_update_payment_status,
     service_get_payment_history,
-    service_delete_payment
+    service_delete_payment,
+    service_get_payment_details_for_tenant
 )
 
 LIGHT_BG = "#F4F6F8"
@@ -22,13 +23,41 @@ class PaymentPage(tk.Frame):
         super().__init__(parent, bg=LIGHT_BG)
         self.current_user = user
         self.selected_payment_id = None
+        self.setup_scrollable_area()
         self.create_widgets()
         self.load_records()
 
+    def setup_scrollable_area(self):
+        self.canvas = tk.Canvas(self, bg=LIGHT_BG, highlightthickness=0)
+        self.scrollbar = tk.Scrollbar(self, orient="vertical", command=self.canvas.yview)
+        self.scrollable_frame = tk.Frame(self.canvas, bg=LIGHT_BG)
+
+        self.scrollable_frame.bind(
+            "<Configure>",
+            lambda e: self.canvas.configure(scrollregion=self.canvas.bbox("all"))
+        )
+
+        self.canvas_window = self.canvas.create_window((0, 0), window=self.scrollable_frame, anchor="nw")
+        self.canvas.configure(yscrollcommand=self.scrollbar.set)
+
+        self.canvas.pack(side="left", fill="both", expand=True)
+        self.scrollbar.pack(side="right", fill="y")
+
+        self.canvas.bind("<Configure>", self.on_canvas_configure)
+        self.canvas.bind_all("<MouseWheel>", self.on_mousewheel)
+
+    def on_canvas_configure(self, event):
+        self.canvas.itemconfig(self.canvas_window, width=event.width)
+
+    def on_mousewheel(self, event):
+        self.canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
+
     def create_widgets(self):
+        container = self.scrollable_frame
+
         #page title
         title = tk.Label(
-            self,
+            container,
             text="Payment Management",
             bg=LIGHT_BG,
             fg=TEXT,
@@ -38,7 +67,7 @@ class PaymentPage(tk.Frame):
 
         #page subtitle
         subtitle = tk.Label(
-            self,
+            container,
             text="Track rent payments, invoices and payment status",
             bg=LIGHT_BG,
             fg=SUBTEXT,
@@ -48,7 +77,7 @@ class PaymentPage(tk.Frame):
 
         #form box
         form_box = tk.Frame(
-            self,
+            container,
             bg=WHITE,
             highlightbackground="#E0E0E0",
             highlightthickness=1
@@ -64,14 +93,16 @@ class PaymentPage(tk.Frame):
         tk.Label(form_box, text="Tenant ID", bg=WHITE, fg=TEXT, font=("Arial", 11)).grid(row=0, column=0, padx=15, pady=12, sticky="w")
         self.tenant_id_entry = tk.Entry(form_box, width=25, bg="white", fg=TEXT, insertbackground=TEXT, relief="solid", bd=1)
         self.tenant_id_entry.grid(row=0, column=1, padx=15, pady=12)
+        self.tenant_id_entry.bind("<FocusOut>", self.auto_fill_payment_details)
+        self.tenant_id_entry.bind("<KeyRelease>", self.auto_fill_payment_details)
 
         tk.Label(form_box, text="Apartment ID", bg=WHITE, fg=TEXT, font=("Arial", 11)).grid(row=0, column=2, padx=15, pady=12, sticky="w")
-        self.apartment_id_entry = tk.Entry(form_box, width=25, bg="white", fg=TEXT, insertbackground=TEXT, relief="solid", bd=1)
+        self.apartment_id_entry = tk.Entry(form_box, width=25, bg="#F3F4F6", fg=TEXT, relief="solid", bd=1)
         self.apartment_id_entry.grid(row=0, column=3, padx=15, pady=12)
 
         #row 2
         tk.Label(form_box, text="Amount", bg=WHITE, fg=TEXT, font=("Arial", 11)).grid(row=1, column=0, padx=15, pady=12, sticky="w")
-        self.amount_entry = tk.Entry(form_box, width=25, bg="white", fg=TEXT, insertbackground=TEXT, relief="solid", bd=1)
+        self.amount_entry = tk.Entry(form_box, width=25, bg="#F3F4F6", fg=TEXT, relief="solid", bd=1)
         self.amount_entry.grid(row=1, column=1, padx=15, pady=12)
 
         tk.Label(form_box, text="Due Date", bg=WHITE, fg=TEXT, font=("Arial", 11)).grid(row=1, column=2, padx=15, pady=12, sticky="w")
@@ -86,32 +117,20 @@ class PaymentPage(tk.Frame):
         self.due_date_entry.grid(row=1, column=3, padx=15, pady=12)
 
         #row 3
-        tk.Label(form_box, text="Payment Date", bg=WHITE, fg=TEXT, font=("Arial", 11)).grid(row=2, column=0, padx=15, pady=12, sticky="w")
-        self.payment_date_entry = DateEntry(
-            form_box,
-            width=23,
-            background="#2F5D8C",
-            foreground="white",
-            borderwidth=1,
-            date_pattern="yyyy-mm-dd"
-        )
-        self.payment_date_entry.grid(row=2, column=1, padx=15, pady=12)
-
-        tk.Label(form_box, text="Payment Status", bg=WHITE, fg=TEXT, font=("Arial", 11)).grid(row=2, column=2, padx=15, pady=12, sticky="w")
+        tk.Label(form_box, text="Payment Status", bg=WHITE, fg=TEXT, font=("Arial", 11)).grid(row=2, column=0, padx=15, pady=12, sticky="w")
         self.status_var = tk.StringVar(value="Pending")
-        status_menu = tk.OptionMenu(form_box, self.status_var, "Pending", "Paid", "Late", "Overdue")
+        status_menu = tk.OptionMenu(form_box, self.status_var, "Pending", "Paid")
         status_menu.config(width=22, bg=WHITE, fg=TEXT, relief="solid", bd=1, highlightthickness=0)
-        status_menu.grid(row=2, column=3, padx=15, pady=12, sticky="w")
+        status_menu.grid(row=2, column=1, padx=15, pady=12, sticky="w")
 
-        #row 4
-        tk.Label(form_box, text="Invoice Number", bg=WHITE, fg=TEXT, font=("Arial", 11)).grid(row=3, column=0, padx=15, pady=12, sticky="w")
+        tk.Label(form_box, text="Invoice Number", bg=WHITE, fg=TEXT, font=("Arial", 11)).grid(row=2, column=2, padx=15, pady=12, sticky="w")
         self.invoice_entry = tk.Entry(form_box, width=25, bg="#F3F4F6", fg=TEXT, relief="solid", bd=1)
         self.invoice_entry.insert(0, "INV-AUTO")
         self.invoice_entry.config(state="readonly")
-        self.invoice_entry.grid(row=3, column=1, padx=15, pady=12)
+        self.invoice_entry.grid(row=2, column=3, padx=15, pady=12)
 
         #button area
-        button_frame = tk.Frame(self, bg=LIGHT_BG)
+        button_frame = tk.Frame(container, bg=LIGHT_BG)
         button_frame.pack(anchor="w", padx=25, pady=12)
 
         tk.Button(
@@ -180,14 +199,13 @@ class PaymentPage(tk.Frame):
 
         #records box
         records_box = tk.Frame(
-            self,
+            container,
             bg=WHITE,
             highlightbackground="#E0E0E0",
             highlightthickness=1
         )
         records_box.pack(fill="both", expand=True, padx=25, pady=10)
 
-        #records title
         records_title = tk.Label(
             records_box,
             text="Payment History",
@@ -204,19 +222,17 @@ class PaymentPage(tk.Frame):
             "apartment_id",
             "amount",
             "due_date",
-            "payment_date",
             "status",
             "invoice_number"
         )
 
-        self.tree = ttk.Treeview(records_box, columns=columns, show="headings", selectmode="browse")
+        self.tree = ttk.Treeview(records_box, columns=columns, show="headings", selectmode="browse", height=8)
 
         self.tree.heading("payment_id", text="Payment ID")
         self.tree.heading("tenant_id", text="Tenant ID")
         self.tree.heading("apartment_id", text="Apartment ID")
         self.tree.heading("amount", text="Amount")
         self.tree.heading("due_date", text="Due Date")
-        self.tree.heading("payment_date", text="Payment Date")
         self.tree.heading("status", text="Status")
         self.tree.heading("invoice_number", text="Invoice Number")
 
@@ -225,12 +241,33 @@ class PaymentPage(tk.Frame):
         self.tree.column("apartment_id", width=100, anchor="center")
         self.tree.column("amount", width=90, anchor="center")
         self.tree.column("due_date", width=110, anchor="center")
-        self.tree.column("payment_date", width=110, anchor="center")
         self.tree.column("status", width=100, anchor="center")
         self.tree.column("invoice_number", width=120, anchor="center")
 
         self.tree.pack(fill="both", expand=True, padx=15, pady=(0, 15))
         self.tree.bind("<<TreeviewSelect>>", self.on_row_select)
+
+    def auto_fill_payment_details(self, event=None):
+        tenant_id = self.tenant_id_entry.get().strip()
+        if not tenant_id:
+            self.apartment_id_entry.delete(0, tk.END)
+            self.amount_entry.delete(0, tk.END)
+            return
+
+        response = service_get_payment_details_for_tenant(self.current_user, tenant_id)
+
+        if not response["success"]:
+            self.apartment_id_entry.delete(0, tk.END)
+            self.amount_entry.delete(0, tk.END)
+            return
+
+        payment_data = response["data"]
+
+        self.apartment_id_entry.delete(0, tk.END)
+        self.apartment_id_entry.insert(0, str(payment_data["apartment_id"]))
+
+        self.amount_entry.delete(0, tk.END)
+        self.amount_entry.insert(0, str(payment_data["amount"]))
 
     def load_records(self):
         response = service_get_payment_history(self.current_user)
@@ -249,7 +286,6 @@ class PaymentPage(tk.Frame):
                 payment["apartment_id"],
                 payment["amount"],
                 payment["due_date"],
-                payment["payment_date"],
                 payment["status"],
                 payment["invoice_number"]
             ))
@@ -270,14 +306,11 @@ class PaymentPage(tk.Frame):
         if values[4]:
             self.due_date_entry.set_date(values[4])
 
-        if values[5]:
-            self.payment_date_entry.set_date(values[5])
-
-        self.status_var.set(values[6] if values[6] else "Pending")
+        self.status_var.set(values[5] if values[5] else "Pending")
 
         self.invoice_entry.config(state="normal")
         self.invoice_entry.delete(0, tk.END)
-        self.invoice_entry.insert(0, values[7])
+        self.invoice_entry.insert(0, values[6])
         self.invoice_entry.config(state="readonly")
 
     def handle_add(self):
@@ -285,7 +318,7 @@ class PaymentPage(tk.Frame):
         apartment_id = self.apartment_id_entry.get().strip()
         amount_text = self.amount_entry.get().strip()
         due_date = self.due_date_entry.get()
-        payment_date = self.payment_date_entry.get()
+        payment_date = None
         status = self.status_var.get()
         invoice_number = None
 
@@ -364,9 +397,7 @@ class PaymentPage(tk.Frame):
         self.amount_entry.delete(0, tk.END)
 
         self.status_var.set("Pending")
-
         self.due_date_entry.set_date(self.due_date_entry._date)
-        self.payment_date_entry.set_date(self.payment_date_entry._date)
 
         self.invoice_entry.config(state="normal")
         self.invoice_entry.delete(0, tk.END)

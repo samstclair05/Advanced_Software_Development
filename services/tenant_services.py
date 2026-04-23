@@ -1,16 +1,13 @@
 #By Lonique
+#partially edited by Htet Oo Wai
 
 from datetime import date, timedelta
 from models.tenant import get_all_tenants, get_tenant, add_tenant, update_tenant, delete_tenant
+from models.apartment import get_apartment
 from database.db_connection import get_connection
+from services.location_guard import check_location_access
 
-#Roles (for memory)
-# Front Desk Staff:  register/view tenants, assign to apartments
-# Administrator:     full access for their location
-# Manager:           view only (overseeing everything)
-# Finance Manager:   no tenant management access
-# Maintenance Staff: no tenant management access
-
+#Roles
 ROLES_CAN_VIEW   = {"front_desk", "administrator", "manager"}
 ROLES_CAN_EDIT   = {"front_desk", "administrator"}
 ROLES_CAN_DELETE = {"administrator"}
@@ -18,10 +15,6 @@ ROLES_CAN_ASSIGN = {"front_desk", "administrator"}
 
 
 def _check_access(current_user, allowed_roles):
-    """
-    Check if the current user's role is in the allowed.
-    Return access granting message
-    """
     if not current_user:
         return {"access": False, "error": "No user is logged in."}
     role = current_user.get("role")
@@ -36,25 +29,43 @@ def service_get_all_tenants(current_user):
     access = _check_access(current_user, ROLES_CAN_VIEW)
     if not access["access"]:
         return {"success": False, "error": access["error"]}
-    
-    allowed, err = check_location_access(current_user, location)
-    if not allowed:
-        return {"success": False, "error": err}
-    return {"success": True, "data": get_all_tenants()}
+
+    #administrator can see all
+    if current_user.get("role") == "administrator":
+        return {"success": True, "data": get_all_tenants()}
+
+    user_loc = current_user.get("location")
+    if not user_loc:
+        return {"success": False, "error": "User location is not set."}
+
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        SELECT DISTINCT t.*
+        FROM tenants t
+        LEFT JOIN leases l ON t.tenant_id = l.tenant_id
+        LEFT JOIN apartments a ON l.apartment_id = a.apartment_id
+        WHERE a.location = ?
+        ORDER BY t.tenant_id
+        """,
+        (user_loc,)
+    )
+    rows = cursor.fetchall()
+    conn.close()
+
+    return {"success": True, "data": [dict(row) for row in rows]}
 
 
 def service_get_tenant(current_user, tenant_id):
     access = _check_access(current_user, ROLES_CAN_VIEW)
     if not access["access"]:
         return {"success": False, "error": access["error"]}
-    
-    allowed, err = check_location_access(current_user, location)
-    if not allowed:
-        return {"success": False, "error": err}
+
     tenant = get_tenant(tenant_id)
-    
     if not tenant:
         return {"success": False, "error": f"Tenant ID {tenant_id} not found."}
+
     return {"success": True, "data": tenant}
 
 
@@ -64,11 +75,6 @@ def service_add_tenant(current_user, name, phone, email, occupation,
     if not access["access"]:
         return {"success": False, "error": access["error"]}
 
-
-    allowed, err = check_location_access(current_user, location)
-    if not allowed:
-        return {"success": False, "error": err}
-    
     cleaned_ni = ni_number.strip().upper()
 
     if cleaned_ni:
@@ -91,10 +97,7 @@ def service_update_tenant(current_user, tenant_id, name, phone, email, occupatio
     access = _check_access(current_user, ROLES_CAN_EDIT)
     if not access["access"]:
         return {"success": False, "error": access["error"]}
-    
-    allowed, err = check_location_access(current_user, location)
-    if not allowed:
-        return {"success": False, "error": err}
+
     if not get_tenant(tenant_id):
         return {"success": False, "error": f"Tenant ID {tenant_id} not found."}
 
@@ -109,14 +112,10 @@ def service_delete_tenant(current_user, tenant_id):
     access = _check_access(current_user, ROLES_CAN_DELETE)
     if not access["access"]:
         return {"success": False, "error": access["error"]}
-    
-    allowed, err = check_location_access(current_user, location)
-    if not allowed:
-        return {"success": False, "error": err}
+
     if not get_tenant(tenant_id):
         return {"success": False, "error": f"Tenant ID {tenant_id} not found."}
 
-    # Block deletion if tenant has an active lease
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute("SELECT lease_id FROM leases WHERE tenant_id = ? AND status = 'Active'", (tenant_id,))
@@ -125,48 +124,63 @@ def service_delete_tenant(current_user, tenant_id):
         return {"success": False, "error": "Cannot delete tenant: they have an active lease. Terminate it first."}
     conn.close()
 
-    #use CRUD subroutines
     delete_tenant(tenant_id)
     return {"success": True}
+
+
+def service_get_apartment_rent_for_assignment(current_user, apartment_id):
+    access = _check_access(current_user, ROLES_CAN_ASSIGN)
+    if not access["access"]:
+        return {"success": False, "error": access["error"]}
+
+    apartment = get_apartment(apartment_id)
+    if not apartment:
+        return {"success": False, "error": f"Apartment ID {apartment_id} not found."}
+
+    allowed, err = check_location_access(current_user, apartment["location"])
+    if not allowed:
+        return {"success": False, "error": err}
+
+    return {
+        "success": True,
+        "data": {
+            "apartment_id": apartment["apartment_id"],
+            "monthly_rent": apartment["monthly_rent"],
+            "status": apartment["occupancy_status"]
+        }
+    }
 
 
 # assigning lease
 def service_assign_tenant_to_apartment(current_user, tenant_id, apartment_id,
                                        start_date, end_date, monthly_rent):
-    """
-    Assign a tenant to a empty apartment. 
-    Create a lease and tghrn mark apartment Occupied.
-    Only Front Desk Staff and Administrators allowed to do this.
-    """
     access = _check_access(current_user, ROLES_CAN_ASSIGN)
     if not access["access"]:
         return {"success": False, "error": access["error"]}
 
-    allowed, err = check_location_access(current_user, location)
-    if not allowed:
-        return {"success": False, "error": err}
     if not get_tenant(tenant_id):
         return {"success": False, "error": f"Tenant ID {tenant_id} not found."}
 
     conn = get_connection()
     cursor = conn.cursor()
 
-    # Check if apartment exist and if available
     cursor.execute("SELECT * FROM apartments WHERE apartment_id = ?", (apartment_id,))
     apartment = cursor.fetchone()
     if not apartment:
         conn.close()
         return {"success": False, "error": f"Apartment ID {apartment_id} not found."}
-    
-    allowed, err = check_location_access(current_user, location)
+
+    apartment = dict(apartment)
+
+    allowed, err = check_location_access(current_user, apartment["location"])
     if not allowed:
+        conn.close()
         return {"success": False, "error": err}
-    
-    if dict(apartment)["occupancy_status"] != "Vacant":
+
+    if apartment["occupancy_status"] != "Vacant":
         conn.close()
         return {"success": False, "error": f"Apartment {apartment_id} is not vacant."}
 
-    # Check tenant doesn't already have an active lease
     cursor.execute("SELECT lease_id FROM leases WHERE tenant_id = ? AND status = 'Active'", (tenant_id,))
     if cursor.fetchone():
         conn.close()
@@ -192,18 +206,10 @@ def service_assign_tenant_to_apartment(current_user, tenant_id, apartment_id,
 
 
 def service_terminate_lease(current_user, lease_id, early=False):
-    """
-    Terminate a lease. If early is True, apply 1 month notice and 5% rent penalty.
-    Only Administrators can terminate leases.
-    """
     access = _check_access(current_user, ROLES_CAN_DELETE)
     if not access["access"]:
         return {"success": False, "error": access["error"]}
 
-    allowed, err = check_location_access(current_user, location)
-    if not allowed:
-        return {"success": False, "error": err}
-    
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM leases WHERE lease_id = ?", (lease_id,))
@@ -242,10 +248,6 @@ def service_get_tenant_lease_history(current_user, tenant_id):
     if not access["access"]:
         return {"success": False, "error": access["error"]}
 
-    allowed, err = check_location_access(current_user, location)
-    if not allowed:
-        return {"success": False, "error": err}
-    
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute(

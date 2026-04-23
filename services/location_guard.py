@@ -1,13 +1,13 @@
 def check_location_access(current_user, resource_location):
     """
-    Aministrators have no location restriction.
-    All other roles are scoped to their assigned location.
+    Administrators can access all locations.
+    All other roles are restricted to their own location.
     """
     role = current_user.get("role")
     user_location = current_user.get("location")
 
-    if role == "Administrator":
-        return True, None  #Administrators see everything
+    if role == "administrator":
+        return True, None
 
     if not user_location:
         return False, "Your account has no location assigned. Contact an administrator."

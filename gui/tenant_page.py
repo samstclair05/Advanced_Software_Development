@@ -7,7 +7,8 @@ from services.tenant_services import (
     service_add_tenant,
     service_update_tenant,
     service_delete_tenant,
-    service_assign_tenant_to_apartment
+    service_assign_tenant_to_apartment,
+    service_get_apartment_rent_for_assignment
 )
 
 LIGHT_BG = "#F4F6F8"
@@ -38,14 +39,12 @@ class TenantPage(tk.Frame):
         )
 
         self.canvas_window = self.canvas.create_window((0, 0), window=self.scrollable_frame, anchor="nw")
-
         self.canvas.configure(yscrollcommand=self.scrollbar.set)
 
         self.canvas.pack(side="left", fill="both", expand=True)
         self.scrollbar.pack(side="right", fill="y")
 
         self.canvas.bind("<Configure>", self.on_canvas_configure)
-
         self.canvas.bind_all("<MouseWheel>", self.on_mousewheel)
 
     def on_canvas_configure(self, event):
@@ -120,7 +119,11 @@ class TenantPage(tk.Frame):
         occupation_menu.grid(row=1, column=3, padx=15, pady=12, sticky="w")
 
         #row 3
-        tk.Label(form_box, text="Lease Start Date", bg=WHITE, fg=TEXT, font=("Arial", 11)).grid(row=2, column=0, padx=15, pady=12, sticky="w")
+        tk.Label(form_box, text="NI Number", bg=WHITE, fg=TEXT, font=("Arial", 11)).grid(row=2, column=0, padx=15, pady=12, sticky="w")
+        self.ni_entry = tk.Entry(form_box, width=25, bg="white", fg=TEXT, insertbackground=TEXT, relief="solid", bd=1)
+        self.ni_entry.grid(row=2, column=1, padx=15, pady=12)
+
+        tk.Label(form_box, text="Lease Start Date", bg=WHITE, fg=TEXT, font=("Arial", 11)).grid(row=2, column=2, padx=15, pady=12, sticky="w")
         self.lease_start_entry = DateEntry(
             form_box,
             width=23,
@@ -129,9 +132,10 @@ class TenantPage(tk.Frame):
             borderwidth=1,
             date_pattern="yyyy-mm-dd"
         )
-        self.lease_start_entry.grid(row=2, column=1, padx=15, pady=12)
+        self.lease_start_entry.grid(row=2, column=3, padx=15, pady=12)
 
-        tk.Label(form_box, text="Lease End Date", bg=WHITE, fg=TEXT, font=("Arial", 11)).grid(row=2, column=2, padx=15, pady=12, sticky="w")
+        #row 4
+        tk.Label(form_box, text="Lease End Date", bg=WHITE, fg=TEXT, font=("Arial", 11)).grid(row=3, column=0, padx=15, pady=12, sticky="w")
         self.lease_end_entry = DateEntry(
             form_box,
             width=23,
@@ -140,14 +144,14 @@ class TenantPage(tk.Frame):
             borderwidth=1,
             date_pattern="yyyy-mm-dd"
         )
-        self.lease_end_entry.grid(row=2, column=3, padx=15, pady=12)
+        self.lease_end_entry.grid(row=3, column=1, padx=15, pady=12)
 
-        #row 4
-        tk.Label(form_box, text="Reference", bg=WHITE, fg=TEXT, font=("Arial", 11)).grid(row=3, column=0, padx=15, pady=12, sticky="w")
+        tk.Label(form_box, text="Reference", bg=WHITE, fg=TEXT, font=("Arial", 11)).grid(row=3, column=2, padx=15, pady=12, sticky="w")
         self.reference_entry = tk.Entry(form_box, width=25, bg="white", fg=TEXT, insertbackground=TEXT, relief="solid", bd=1)
-        self.reference_entry.grid(row=3, column=1, padx=15, pady=12)
+        self.reference_entry.grid(row=3, column=3, padx=15, pady=12)
 
-        tk.Label(form_box, text="Apartment Requirement", bg=WHITE, fg=TEXT, font=("Arial", 11)).grid(row=3, column=2, padx=15, pady=12, sticky="w")
+        #row 5
+        tk.Label(form_box, text="Apartment Requirement", bg=WHITE, fg=TEXT, font=("Arial", 11)).grid(row=4, column=0, padx=15, pady=12, sticky="w")
         self.apartment_req_var = tk.StringVar(value="No Preference")
         apartment_req_menu = tk.OptionMenu(
             form_box,
@@ -159,7 +163,7 @@ class TenantPage(tk.Frame):
             "3 Bedroom"
         )
         apartment_req_menu.config(width=22, bg=WHITE, fg=TEXT, relief="solid", bd=1, highlightthickness=0)
-        apartment_req_menu.grid(row=3, column=3, padx=15, pady=12, sticky="w")
+        apartment_req_menu.grid(row=4, column=1, padx=15, pady=12, sticky="w")
 
         #button area
         button_frame = tk.Frame(container, bg=LIGHT_BG)
@@ -253,12 +257,30 @@ class TenantPage(tk.Frame):
         lease_box.grid_columnconfigure(3, weight=1)
 
         tk.Label(lease_box, text="Apartment ID", bg=WHITE, fg=TEXT, font=("Arial", 11)).grid(row=1, column=0, padx=15, pady=12, sticky="w")
-        self.assign_apartment_entry = tk.Entry(lease_box, width=25, bg="white", fg=TEXT, insertbackground=TEXT, relief="solid", bd=1)
+        self.assign_apartment_entry = tk.Entry(
+            lease_box,
+            width=25,
+            bg="white",
+            fg=TEXT,
+            insertbackground=TEXT,
+            relief="solid",
+            bd=1
+        )
         self.assign_apartment_entry.grid(row=1, column=1, padx=15, pady=12)
 
         tk.Label(lease_box, text="Monthly Rent", bg=WHITE, fg=TEXT, font=("Arial", 11)).grid(row=1, column=2, padx=15, pady=12, sticky="w")
-        self.assign_rent_entry = tk.Entry(lease_box, width=25, bg="white", fg=TEXT, insertbackground=TEXT, relief="solid", bd=1)
+        self.assign_rent_entry = tk.Entry(
+            lease_box,
+            width=25,
+            bg="#F3F4F6",
+            fg=TEXT,
+            relief="solid",
+            bd=1
+        )
         self.assign_rent_entry.grid(row=1, column=3, padx=15, pady=12)
+
+        self.assign_apartment_entry.bind("<KeyRelease>", self.auto_fill_rent_from_apartment)
+        self.assign_apartment_entry.bind("<FocusOut>", self.auto_fill_rent_from_apartment)
 
         tk.Label(lease_box, text="Lease Start Date", bg=WHITE, fg=TEXT, font=("Arial", 11)).grid(row=2, column=0, padx=15, pady=12, sticky="w")
         self.assign_start_entry = DateEntry(
@@ -323,6 +345,7 @@ class TenantPage(tk.Frame):
             "phone",
             "email",
             "occupation",
+            "ni_number",
             "lease_period",
             "reference",
             "apartment_requirement"
@@ -334,6 +357,7 @@ class TenantPage(tk.Frame):
         self.tree.heading("phone", text="Phone")
         self.tree.heading("email", text="Email")
         self.tree.heading("occupation", text="Occupation")
+        self.tree.heading("ni_number", text="NI Number")
         self.tree.heading("lease_period", text="Lease Period")
         self.tree.heading("reference", text="Reference")
         self.tree.heading("apartment_requirement", text="Apartment Requirement")
@@ -343,6 +367,7 @@ class TenantPage(tk.Frame):
         self.tree.column("phone", width=110)
         self.tree.column("email", width=170)
         self.tree.column("occupation", width=120)
+        self.tree.column("ni_number", width=120)
         self.tree.column("lease_period", width=180)
         self.tree.column("reference", width=120)
         self.tree.column("apartment_requirement", width=150)
@@ -367,6 +392,7 @@ class TenantPage(tk.Frame):
                 t["phone"],
                 t["email"],
                 t["occupation"],
+                t["ni_number"],
                 t["lease_period"],
                 t["reference"],
                 t["apartment_requirement"]
@@ -385,15 +411,16 @@ class TenantPage(tk.Frame):
         self.phone_entry.insert(0, values[2])
         self.email_entry.insert(0, values[3])
         self.occupation_var.set(values[4] if values[4] else "Student")
+        self.ni_entry.insert(0, values[5])
 
-        lease_period = values[5]
+        lease_period = values[6]
         if " to " in lease_period:
             start_date, end_date = lease_period.split(" to ", 1)
             self.lease_start_entry.set_date(start_date)
             self.lease_end_entry.set_date(end_date)
 
-        self.reference_entry.insert(0, values[6])
-        self.apartment_req_var.set(values[7] if values[7] else "No Preference")
+        self.reference_entry.insert(0, values[7])
+        self.apartment_req_var.set(values[8] if values[8] else "No Preference")
 
     def handle_add(self):
         name = self.name_entry.get().strip()
@@ -409,7 +436,7 @@ class TenantPage(tk.Frame):
             self.phone_entry.get().strip(),
             self.email_entry.get().strip(),
             self.occupation_var.get().strip(),
-            "",
+            self.ni_entry.get().strip(),
             lease_period,
             self.reference_entry.get().strip(),
             self.apartment_req_var.get().strip()
@@ -444,7 +471,7 @@ class TenantPage(tk.Frame):
             self.phone_entry.get().strip(),
             self.email_entry.get().strip(),
             self.occupation_var.get().strip(),
-            "",
+            self.ni_entry.get().strip(),
             lease_period,
             self.reference_entry.get().strip(),
             self.apartment_req_var.get().strip()
@@ -477,18 +504,50 @@ class TenantPage(tk.Frame):
         self.handle_clear()
         self.load_records()
 
+    def auto_fill_rent_from_apartment(self, event=None):
+        apartment_id = self.assign_apartment_entry.get().strip()
+
+        self.assign_rent_entry.delete(0, tk.END)
+
+        if not apartment_id:
+            return
+
+        response = service_get_apartment_rent_for_assignment(self.current_user, apartment_id)
+
+        if response["success"]:
+            apartment_data = response["data"]
+            if apartment_data["status"] == "Vacant":
+                self.assign_rent_entry.insert(0, str(apartment_data["monthly_rent"]))
+
     def handle_assign_apartment(self):
         if not self.selected_tenant_id:
             messagebox.showwarning("No Selection", "Please select a tenant from the table (or add one first).")
             return
 
         apartment_id = self.assign_apartment_entry.get().strip()
+        if not apartment_id:
+            messagebox.showwarning("Missing Field", "Apartment ID is required.")
+            return
+
+        rent_response = service_get_apartment_rent_for_assignment(self.current_user, apartment_id)
+        if not rent_response["success"]:
+            messagebox.showerror("Error", rent_response["error"])
+            return
+
+        apartment_data = rent_response["data"]
+        if apartment_data["status"] != "Vacant":
+            messagebox.showerror("Error", f"Apartment {apartment_id} is not vacant.")
+            return
+
+        self.assign_rent_entry.delete(0, tk.END)
+        self.assign_rent_entry.insert(0, str(apartment_data["monthly_rent"]))
+
         start_date = self.assign_start_entry.get()
         end_date = self.assign_end_entry.get()
         monthly_rent_text = self.assign_rent_entry.get().strip()
 
-        if not apartment_id or not monthly_rent_text:
-            messagebox.showwarning("Missing Fields", "Apartment ID and Monthly Rent are required.")
+        if not monthly_rent_text:
+            messagebox.showwarning("Missing Fields", "Monthly Rent could not be loaded.")
             return
 
         try:
@@ -521,6 +580,7 @@ class TenantPage(tk.Frame):
         self.name_entry.delete(0, tk.END)
         self.phone_entry.delete(0, tk.END)
         self.email_entry.delete(0, tk.END)
+        self.ni_entry.delete(0, tk.END)
         self.reference_entry.delete(0, tk.END)
 
         self.occupation_var.set("Student")
