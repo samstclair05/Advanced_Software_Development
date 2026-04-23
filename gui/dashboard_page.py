@@ -1,3 +1,5 @@
+#Lonique Mayoua 24027974
+
 import tkinter as tk
 from gui.tenant_page import TenantPage
 from gui.apartment_page import ApartmentPage

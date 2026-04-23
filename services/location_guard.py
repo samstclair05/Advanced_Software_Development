@@ -1,3 +1,4 @@
+#Lonique Mayoua 24027974
 def check_location_access(current_user, resource_location):
     """
     Administrators can access all locations.

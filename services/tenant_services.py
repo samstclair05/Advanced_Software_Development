@@ -1,5 +1,4 @@
-#By Lonique
-#partially edited by Htet Oo Wai
+#Lonique Mayoua 24027974
 
 from datetime import date, timedelta
 from models.tenant import get_all_tenants, get_tenant, add_tenant, update_tenant, delete_tenant

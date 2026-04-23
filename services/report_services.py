@@ -1,4 +1,7 @@
+#Lonique Mayoua 24027974
+
 from database.db_connection import get_connection
+
 
 ROLES_CAN_VIEW_REPORTS = {"administrator", "manager", "finance_manager"}
 

@@ -1,5 +1,4 @@
-#By Lonique Mayoua
-#partially edited by Htet Oo Wai
+#Lonique Mayoua 24027974
 
 from models.apartment import get_all_apartments, get_apartment, add_apartment, update_apartment, delete_apartment
 from database.db_connection import get_connection

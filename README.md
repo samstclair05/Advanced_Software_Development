@@ -26,7 +26,7 @@ python main.py
 python database/init_db.py
 python -m models.user
 ## Contributions:
-Lonique Mayoua - Backend: Apartment services and Tenant Services, Report services rework and functionailty, Location Access Handling(Front + Backend), Validation Checks, Debugging
+Lonique Mayoua - Backend: Apartment services and Tenant Services, Report services rework and functionailty, Location Access Handling(Front + Backend), Validation Checks, Debugging, testing
 
 Htet Oo Wai - Frontend: Dahsboard, login, apartment, tenant, payment
 
