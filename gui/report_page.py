@@ -1,4 +1,5 @@
 #Lonique Mayoua 24027974
+#Sophia Parsons 24034865
 
 import tkinter as tk
 from tkinter import ttk
