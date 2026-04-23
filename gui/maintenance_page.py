@@ -1,4 +1,5 @@
 # Samuel St Clair - 24022864
+# Sophia Parsons 24034865
 
 import tkinter as tk
 from tkinter import ttk, messagebox
