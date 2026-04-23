@@ -1,4 +1,4 @@
-#By Ayo, Htet
+#by Htet Oo Wai - 24037079
 from datetime import date
 from models.payment import add_payment, update_payment, delete_payment, get_all_payments
 from database.db_connection import get_connection

@@ -1,4 +1,4 @@
-#by Htet Oo Wai,  Samuel St Clair - 24022864
+##by Htet Oo Wai - 24037079,  Samuel St Clair - 24022864
 import tkinter as tk
 from gui.dashboard_page import DashboardPage
 from models.user import get_user
