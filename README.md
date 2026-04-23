@@ -16,7 +16,6 @@ python main.py
 | finance1           | 1234     | Finance Manager     |
 | maint1             | 1234     | Maintenance Staff   |
 | admin1             | 1234     | Administrator       |
-| manager1           | 1234     | Manager             |
 | manager_bristol    | 1234     | Manager (Bristol)   |
 | manager_cardiff    | 1234     | Manager (Cardiff)   |
 | manager_london     | 1234     | Manager (London)    |
