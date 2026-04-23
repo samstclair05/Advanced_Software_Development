@@ -1,4 +1,4 @@
--- Samuel St Clair
+-- Samuel St Clair - 24022864
 
 -- Users table
 CREATE TABLE IF NOT EXISTS users (

@@ -1,3 +1,6 @@
+
+# Samuel St Clair - 24022864
+
 import tkinter as tk
 from gui.tenant_page import TenantPage
 from gui.apartment_page import ApartmentPage
