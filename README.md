@@ -33,3 +33,5 @@ Htet Oo Wai - Frontend: Dahsboard, login, apartment, tenant, payment. A few serv
 Samuel St Clair - All files under database folder, all files under model folder. Connected the database to each page, Update the readme with setup info, Maintenance page rework and functionality, dashboard information connected and updating with data, log-in page design and backend, testing log in page, testing
 
 Esho Ayobami - Backend: Payment services and Maintenance services, Initial report services creation, Frontend-backend integration logic for the payment page, SQL queries for dashboard summaries
+
+Sophia Parsons - Frontend: Maintenance and Report pages, Connected pages to pams database, created sequence diagrams
